@@ -1,0 +1,51 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Build products
+build/
+DerivedData/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcarchive
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods / Carthage / SwiftPM checkouts
+Pods/
+Carthage/Build/
+SourcePackages/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# Temporary and generated local files
+tmp/
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Editor folders
+.vscode/
+.idea/
+
+# Secrets and local environment
+.env
+.env.*
+*.mobileprovision
+*.p12
+*.cer

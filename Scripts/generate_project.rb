@@ -1,0 +1,141 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "xcodeproj"
+require "fileutils"
+
+PROJECT_NAME = "Aqualume"
+PROJECT_PATH = "#{PROJECT_NAME}.xcodeproj"
+
+FileUtils.rm_rf(PROJECT_PATH)
+project = Xcodeproj::Project.new(PROJECT_PATH)
+
+root_group = project.main_group
+
+def add_files_to_group(group, paths)
+  paths.map do |path|
+    group.find_file_by_path(path) || group.new_file(path)
+  end
+end
+
+def add_sources(target, file_refs)
+  file_refs.each do |ref|
+    next unless ref.path.end_with?(".swift")
+    target.add_file_references([ref])
+  end
+end
+
+def add_resources(target, file_refs)
+  refs = file_refs.reject { |ref| ref.path.end_with?(".swift") }
+  target.add_resources(refs) unless refs.empty?
+end
+
+def configure_common(target)
+  target.build_configurations.each do |config|
+    settings = config.build_settings
+    settings["SWIFT_VERSION"] = "6.0"
+    settings["CLANG_ENABLE_MODULES"] = "YES"
+    settings["ENABLE_USER_SCRIPT_SANDBOXING"] = "NO"
+    settings["CODE_SIGN_STYLE"] = "Automatic"
+    settings["CURRENT_PROJECT_VERSION"] = "1"
+    settings["MARKETING_VERSION"] = "1.0"
+    settings["DEVELOPMENT_TEAM"] = ENV.fetch("AQUALUME_DEVELOPMENT_TEAM", "")
+    settings["ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME"] = "AccentColor"
+  end
+end
+
+shared_paths = Dir[
+  "Aqualume/Domain/**/*.swift",
+  "Aqualume/Persistence/**/*.swift",
+  "Aqualume/Services/HydrationServices.swift",
+  "Aqualume/Services/WatchConnectivityHydrationSyncService.swift"
+].sort
+
+ios_paths = Dir[
+  "Aqualume/App/**/*.swift",
+  "Aqualume/Features/**/*.swift",
+  "Aqualume/SharedUI/**/*.swift",
+  "Aqualume/Services/AppleHealthKitService.swift",
+  "Aqualume/Services/LocalReminderScheduler.swift"
+].sort
+
+watch_paths = Dir["AqualumeWatchApp/**/*.swift"].sort
+widget_paths = Dir["AqualumeWidget/**/*.swift"].sort
+test_paths = Dir["AqualumeTests/**/*.swift"].sort
+resource_paths = [
+  "Aqualume/Resources/Assets.xcassets"
+]
+
+all_paths = (shared_paths + ios_paths + watch_paths + widget_paths + test_paths + resource_paths + [
+  "Aqualume/Resources/Info.plist",
+  "Aqualume/Aqualume.entitlements",
+  "AqualumeWatchApp/Info.plist",
+  "AqualumeWatchApp/AqualumeWatchApp.entitlements",
+  "AqualumeWidget/Info.plist",
+  "AqualumeWidget/AqualumeWidget.entitlements"
+]).uniq
+
+file_refs = add_files_to_group(root_group, all_paths)
+refs_by_path = file_refs.to_h { |ref| [ref.path, ref] }
+
+ios_target = project.new_target(:application, "Aqualume", :ios, "17.0")
+configure_common(ios_target)
+ios_target.build_configurations.each do |config|
+  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume"
+  config.build_settings["INFOPLIST_FILE"] = "Aqualume/Resources/Info.plist"
+  config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "Aqualume/Aqualume.entitlements"
+  config.build_settings["TARGETED_DEVICE_FAMILY"] = "1"
+  config.build_settings["SUPPORTED_PLATFORMS"] = "iphoneos iphonesimulator"
+  config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
+end
+add_sources(ios_target, (shared_paths + ios_paths).map { |p| refs_by_path[p] })
+add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
+
+watch_target = project.new_target(:application, "AqualumeWatchApp", :watchos, "9.4")
+configure_common(watch_target)
+watch_target.build_configurations.each do |config|
+  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume.watchapp"
+  config.build_settings["INFOPLIST_FILE"] = "AqualumeWatchApp/Info.plist"
+  config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "AqualumeWatchApp/AqualumeWatchApp.entitlements"
+  config.build_settings["SUPPORTED_PLATFORMS"] = "watchos watchsimulator"
+  config.build_settings["WATCHOS_DEPLOYMENT_TARGET"] = "9.4"
+end
+add_sources(watch_target, (shared_paths + watch_paths + [
+  "Aqualume/Features/Home/HydrationAppState.swift",
+  "Aqualume/SharedUI/HydrationGlassView.swift",
+  "Aqualume/SharedUI/AqualumeHaptics.swift"
+]).map { |p| refs_by_path[p] })
+
+widget_target = project.new_target(:app_extension, "AqualumeWidgetExtension", :ios, "17.0")
+configure_common(widget_target)
+widget_target.build_configurations.each do |config|
+  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume.widget"
+  config.build_settings["INFOPLIST_FILE"] = "AqualumeWidget/Info.plist"
+  config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "AqualumeWidget/AqualumeWidget.entitlements"
+  config.build_settings["SUPPORTED_PLATFORMS"] = "iphoneos iphonesimulator"
+  config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
+  config.build_settings["APPLICATION_EXTENSION_API_ONLY"] = "YES"
+  config.build_settings["SKIP_INSTALL"] = "YES"
+end
+widget_shared_paths = shared_paths - ["Aqualume/Services/WatchConnectivityHydrationSyncService.swift"]
+add_sources(widget_target, (widget_shared_paths + widget_paths).map { |p| refs_by_path[p] })
+add_resources(widget_target, resource_paths.map { |p| refs_by_path[p] })
+
+tests_target = project.new_target(:unit_test_bundle, "AqualumeTests", :ios, "17.0")
+configure_common(tests_target)
+tests_target.build_configurations.each do |config|
+  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume.tests"
+  config.build_settings["INFOPLIST_FILE"] = ""
+  config.build_settings["GENERATE_INFOPLIST_FILE"] = "YES"
+  config.build_settings["SUPPORTED_PLATFORMS"] = "iphoneos iphonesimulator"
+  config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
+  config.build_settings["BUNDLE_LOADER"] = "$(TEST_HOST)"
+  config.build_settings["TEST_HOST"] = "$(BUILT_PRODUCTS_DIR)/Aqualume.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aqualume"
+end
+tests_target.add_dependency(ios_target)
+add_sources(tests_target, test_paths.map { |p| refs_by_path[p] })
+
+project.recreate_user_schemes
+project.save
+
+puts "Generated #{PROJECT_PATH}"
