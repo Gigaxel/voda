@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct AqualumeApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var state: HydrationAppState
 
     init() {
@@ -39,6 +40,12 @@ struct AqualumeApp: App {
                 .environmentObject(state)
                 .task {
                     await state.load()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    guard newPhase == .active else { return }
+                    Task {
+                        await state.load()
+                    }
                 }
         }
     }

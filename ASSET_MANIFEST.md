@@ -18,6 +18,9 @@ Recommended asset catalog names:
 - `GlassHero`
 - `WaterTextureAqua`
 - `DropletCluster`
+- `AppIconLow`
+- `AppIconMid`
+- `AppIconFull`
 - `BackgroundLightAqua`
 - `BackgroundDarkMoonwater`
 - `WidgetBackgroundSmall`
