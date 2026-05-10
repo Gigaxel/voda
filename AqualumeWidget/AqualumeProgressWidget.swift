@@ -31,6 +31,7 @@ struct AqualumeProgressWidget: Widget {
         .configurationDisplayName("Aqualume")
         .description("See today's water progress and add a glass.")
         .supportedFamilies([.systemSmall, .systemMedium])
+        .contentMarginsDisabled()
     }
 }
 
@@ -39,48 +40,79 @@ struct AqualumeWidgetView: View {
     let entry: AqualumeWidgetEntry
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.90, green: 0.99, blue: 1.0), Color(red: 0.08, green: 0.55, blue: 0.66)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .overlay {
-                Image(family == .systemSmall ? "WidgetBackgroundSmall" : "WidgetBackgroundMedium")
-                    .resizable()
-                    .scaledToFill()
-                    .opacity(0.44)
+        Group {
+            if family == .systemMedium {
+                mediumLayout
+            } else {
+                smallLayout
             }
-
-            HStack(spacing: family == .systemSmall ? 8 : 16) {
-                WidgetGlass(progress: entry.snapshot.progress)
-                    .frame(width: family == .systemSmall ? 48 : 62, height: family == .systemSmall ? 68 : 84)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Aqualume")
-                        .font(.headline)
-                    Text(HydrationAmountFormatter.amount(entry.snapshot.todayTotalML, unitSystem: entry.snapshot.settings.unitSystem))
-                        .font(.system(.title3, design: .rounded, weight: .semibold))
-                        .minimumScaleFactor(0.75)
-                    Text("of \(HydrationAmountFormatter.amount(entry.snapshot.settings.dailyGoalML, unitSystem: entry.snapshot.settings.unitSystem))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    if #available(iOSApplicationExtension 17.0, *) {
-                        Button(intent: QuickAddWaterIntent(amountML: entry.snapshot.settings.defaultAmountML)) {
-                            Label("Add", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.cyan)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding()
         }
         .containerBackground(for: .widget) {
-            Color.clear
+            WidgetSurface()
         }
+    }
+
+    private var amountText: String {
+        HydrationAmountFormatter.amount(entry.snapshot.todayTotalML, unitSystem: entry.snapshot.settings.unitSystem)
+    }
+
+    private var goalText: String {
+        HydrationAmountFormatter.amount(entry.snapshot.settings.dailyGoalML, unitSystem: entry.snapshot.settings.unitSystem)
+    }
+
+    private var smallLayout: some View {
+        VStack(spacing: 7) {
+            Spacer(minLength: 0)
+
+            WidgetGlass(progress: entry.snapshot.progress)
+                .frame(width: 72, height: 96)
+
+            VStack(spacing: 1) {
+                Text(amountText)
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(WidgetPalette.ink)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                Text("of \(goalText)")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(WidgetPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private var mediumLayout: some View {
+        HStack(spacing: 18) {
+            WidgetGlass(progress: entry.snapshot.progress)
+                .frame(width: 82, height: 110)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(amountText)
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
+                    .foregroundStyle(WidgetPalette.ink)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                Text("drank today")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(WidgetPalette.muted)
+                Text("goal \(goalText)")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(WidgetPalette.soft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer(minLength: 0)
+
+            QuickAddButton(amountML: entry.snapshot.settings.defaultAmountML)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
     }
 }
 
@@ -89,30 +121,93 @@ struct WidgetGlass: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let rect = CGRect(origin: .zero, size: proxy.size)
-            let fillHeight = rect.height * progress
+            let size = proxy.size
+            let clampedProgress = min(max(progress, 0), 1)
+            let fillHeight = size.height * clampedProgress
+            let glassShape = WidgetGlassShape()
+            let innerGlassShape = WidgetGlassShape(inset: 4)
+
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.white.opacity(0.8), lineWidth: 2)
-                    .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [.cyan.opacity(0.86), .teal.opacity(0.84)],
-                            startPoint: .top,
-                            endPoint: .bottom
+                glassShape
+                    .fill(Color.white.opacity(0.72))
+                    .shadow(color: WidgetPalette.water.opacity(0.13), radius: 10, y: 5)
+
+                ZStack(alignment: .bottom) {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [WidgetPalette.water, WidgetPalette.deepWater],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
-                    )
-                    .frame(height: max(4, fillHeight))
-                    .padding(4)
+                        .frame(height: fillHeight)
+                }
+                .frame(width: size.width, height: size.height, alignment: .bottom)
+                .clipShape(innerGlassShape)
+
+                glassShape
+                    .stroke(WidgetPalette.stroke, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                Capsule()
+                    .fill(Color.white.opacity(0.88))
+                    .frame(width: size.width * 0.55, height: 3)
+                    .offset(y: -size.height * 0.83)
             }
+            .accessibilityHidden(true)
         }
+    }
+}
+
+private struct WidgetGlassShape: InsettableShape {
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let rect = rect.insetBy(dx: inset, dy: inset)
+        let topInset = rect.width * 0.10
+        let bottomInset = rect.width * 0.23
+        let topY = rect.height * 0.11
+        let bottomY = rect.height * 0.94
+        let bottomCurveY = rect.height * 0.99
+
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + topInset, y: rect.minY + topY))
+        path.addLine(to: CGPoint(x: rect.maxX - topInset, y: rect.minY + topY))
+        path.addLine(to: CGPoint(x: rect.maxX - bottomInset, y: rect.minY + bottomY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + bottomInset, y: rect.minY + bottomY),
+            control: CGPoint(x: rect.midX, y: rect.minY + bottomCurveY)
+        )
+        path.closeSubpath()
+        return path
+    }
+
+    func inset(by amount: CGFloat) -> WidgetGlassShape {
+        var shape = self
+        shape.inset += amount
+        return shape
+    }
+}
+
+private struct QuickAddButton: View {
+    let amountML: Int
+
+    var body: some View {
+        Button(intent: QuickAddWaterIntent(amountML: amountML)) {
+            Image(systemName: "plus")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(WidgetPalette.ink)
+                .frame(width: 36, height: 36)
+                .background(Color.white.opacity(0.86), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add water")
     }
 }
 
 struct QuickAddWaterIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Water"
-    static let description = IntentDescription("Add water to Aqualume.")
+    static let description = IntentDescription("Add the default glass amount to Aqualume.")
 
     @Parameter(title: "Amount in ml")
     var amountML: Int
@@ -128,8 +223,30 @@ struct QuickAddWaterIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let repository = JSONHydrationRepository()
         let amount = HydrationValidation.validatedDefaultAmount(amountML)
-        try await repository.appendLog(HydrationLog(amountML: amount, source: .appIntent))
+        try await repository.appendLog(HydrationLog(amountML: amount, source: .widget))
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
+}
+
+private struct WidgetSurface: View {
+    var body: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.98, green: 1.00, blue: 1.00),
+                Color(red: 0.91, green: 0.99, blue: 1.00)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+private enum WidgetPalette {
+    static let ink = Color(red: 0.06, green: 0.20, blue: 0.24)
+    static let muted = Color(red: 0.30, green: 0.50, blue: 0.55)
+    static let soft = Color(red: 0.42, green: 0.62, blue: 0.66)
+    static let stroke = Color(red: 0.08, green: 0.35, blue: 0.42)
+    static let water = Color(red: 0.29, green: 0.84, blue: 0.95)
+    static let deepWater = Color(red: 0.04, green: 0.55, blue: 0.68)
 }

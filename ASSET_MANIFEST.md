@@ -14,12 +14,11 @@ Avoid text embedded in generated images unless explicitly required.
 
 Recommended asset catalog names:
 
-- `AppIcon`
+- `AppIconEmpty`
+- `AppIconMid`
 - `GlassHero`
 - `WaterTextureAqua`
 - `DropletCluster`
-- `AppIconLow`
-- `AppIconMid`
 - `AppIconFull`
 - `BackgroundLightAqua`
 - `BackgroundDarkMoonwater`

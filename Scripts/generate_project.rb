@@ -87,6 +87,9 @@ ios_target.build_configurations.each do |config|
   config.build_settings["TARGETED_DEVICE_FAMILY"] = "1"
   config.build_settings["SUPPORTED_PLATFORMS"] = "iphoneos iphonesimulator"
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
+  config.build_settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIconFull"
+  config.build_settings["ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES"] = "AppIconEmpty AppIconMid"
+  config.build_settings["ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS"] = "YES"
 end
 add_sources(ios_target, (shared_paths + ios_paths).map { |p| refs_by_path[p] })
 add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
@@ -94,6 +97,7 @@ add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
 watch_target = project.new_target(:application, "AqualumeWatchApp", :watchos, "9.4")
 configure_common(watch_target)
 watch_target.build_configurations.each do |config|
+  config.build_settings.delete("ASSETCATALOG_COMPILER_APPICON_NAME")
   config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume.watchapp"
   config.build_settings["INFOPLIST_FILE"] = "AqualumeWatchApp/Info.plist"
   config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "AqualumeWatchApp/AqualumeWatchApp.entitlements"
@@ -120,6 +124,12 @@ end
 widget_shared_paths = shared_paths - ["Aqualume/Services/WatchConnectivityHydrationSyncService.swift"]
 add_sources(widget_target, (widget_shared_paths + widget_paths).map { |p| refs_by_path[p] })
 add_resources(widget_target, resource_paths.map { |p| refs_by_path[p] })
+
+ios_target.add_dependency(widget_target)
+embed_widgets_phase = ios_target.new_copy_files_build_phase("Embed App Extensions")
+embed_widgets_phase.symbol_dst_subfolder_spec = :plug_ins
+embedded_widget = embed_widgets_phase.add_file_reference(widget_target.product_reference, true)
+embedded_widget.settings = { "ATTRIBUTES" => ["RemoveHeadersOnCopy"] }
 
 tests_target = project.new_target(:unit_test_bundle, "AqualumeTests", :ios, "17.0")
 configure_common(tests_target)

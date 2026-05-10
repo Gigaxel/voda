@@ -1,5 +1,8 @@
 import Combine
 import Foundation
+#if os(iOS)
+import WidgetKit
+#endif
 
 @MainActor
 public final class HydrationAppState: ObservableObject {
@@ -92,6 +95,7 @@ public final class HydrationAppState: ObservableObject {
             logs = try await hydrationRepository.loadLogs()
             latestAddedAmountML = safeAmount
             await sync.sendLog(log)
+            reloadWidgets()
         } catch {
             statusMessage = "Unable to save water."
         }
@@ -106,6 +110,7 @@ public final class HydrationAppState: ObservableObject {
             }
             logs = try await hydrationRepository.loadLogs()
             latestAddedAmountML = nil
+            reloadWidgets()
         } catch {
             statusMessage = "Unable to undo latest log."
         }
@@ -125,6 +130,7 @@ public final class HydrationAppState: ObservableObject {
                 await reminders.cancelReminders()
             }
             await sync.sendSettings(settings)
+            reloadWidgets()
         } catch {
             statusMessage = "Unable to update settings."
         }
@@ -139,5 +145,11 @@ public final class HydrationAppState: ObservableObject {
         } catch {
             statusMessage = "Health permission unavailable."
         }
+    }
+
+    private func reloadWidgets() {
+        #if os(iOS)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 }

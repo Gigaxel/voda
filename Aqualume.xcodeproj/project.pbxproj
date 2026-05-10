@@ -17,6 +17,7 @@
 		40F3758ABEBB562C2153A10D /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		450CA344AE93D07EF83D69AC /* AqualumeHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */; };
 		48ABD765CD343B4C57AE1D7E /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
+		52E6601B423760B4561251E9 /* AqualumeWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		57BDDDE6F2E4797AF9037668 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD00E1D142CF1F9AA872EE6 /* SettingsView.swift */; };
 		598B82941A193B22565A1394 /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
 		616651BC39A0AD22AA11E7D8 /* AqualumeHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */; };
@@ -62,7 +63,28 @@
 			remoteGlobalIDString = 1B5FEFF2DCEAA8D3A82F70A1;
 			remoteInfo = Aqualume;
 		};
+		E39A896AE21714F67D045E37 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 250588B6FA639D3C362E4668 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C6D6B4FF5EBAC4ADD486E01C;
+			remoteInfo = AqualumeWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		05C53B7B33181D251652C153 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				52E6601B423760B4561251E9 /* AqualumeWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1697CE0244502F0100599A7A /* AqualumeApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeApp.swift; path = Aqualume/App/AqualumeApp.swift; sourceTree = "<group>"; };
@@ -227,10 +249,12 @@
 				8451D7E891EF8CA0FACF79F4 /* Sources */,
 				D58F532D8101104FA734FE07 /* Frameworks */,
 				8BEE354DA247BF020A943A9E /* Resources */,
+				05C53B7B33181D251652C153 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A370A964FAD0CA200EF086E6 /* PBXTargetDependency */,
 			);
 			name = Aqualume;
 			productName = Aqualume;
@@ -431,6 +455,12 @@
 			target = 1B5FEFF2DCEAA8D3A82F70A1 /* Aqualume */;
 			targetProxy = DB1E84E51E67B68F8F3C4067 /* PBXContainerItemProxy */;
 		};
+		A370A964FAD0CA200EF086E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AqualumeWidgetExtension;
+			target = C6D6B4FF5EBAC4ADD486E01C /* AqualumeWidgetExtension */;
+			targetProxy = E39A896AE21714F67D045E37 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -461,8 +491,8 @@
 		4B7D497655853A2216123D18 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconLow AppIconMid AppIconFull";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconEmpty AppIconMid";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconFull;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -510,7 +540,6 @@
 		6BAEF0BA66673EB11FB69B12 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AqualumeWatchApp/AqualumeWatchApp.entitlements;
@@ -534,8 +563,8 @@
 		7C7C2FFE54BF16AD0541633B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconLow AppIconMid AppIconFull";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconEmpty AppIconMid";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconFull;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -723,7 +752,6 @@
 		DC5CFC868A3CB221B5BE026C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AqualumeWatchApp/AqualumeWatchApp.entitlements;

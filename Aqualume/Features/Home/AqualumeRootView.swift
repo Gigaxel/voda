@@ -137,13 +137,8 @@ struct AqualumeRootView: View {
     }
 
     private var hydrationAppIconName: String? {
-        guard state.todayTotalML > 0 else { return nil }
-        guard !state.hasReachedGoal else { return "AppIconFull" }
-
-        if state.progress >= 0.5 {
-            return "AppIconMid"
-        }
-        return "AppIconLow"
+        guard !state.hasReachedGoal else { return nil }
+        return state.progress >= 0.5 ? "AppIconMid" : "AppIconEmpty"
     }
 }
 
