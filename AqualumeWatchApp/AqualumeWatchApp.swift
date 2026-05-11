@@ -5,7 +5,7 @@ struct AqualumeWatchApp: App {
     @StateObject private var state: HydrationAppState
 
     init() {
-        let repository = JSONHydrationRepository()
+        let repository = SQLiteHydrationRepository()
         let sync = WatchConnectivityHydrationSyncService(
             onLog: { log in
                 Task { try? await repository.appendLog(log) }

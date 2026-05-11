@@ -6,7 +6,7 @@ struct AqualumeApp: App {
     @StateObject private var state: HydrationAppState
 
     init() {
-        let repository = JSONHydrationRepository()
+        let repository = SQLiteHydrationRepository()
         #if os(iOS)
         let healthKit: HealthKitWaterWriting = AppleHealthKitService()
         let reminders: ReminderScheduling = LocalReminderScheduler()

@@ -221,7 +221,7 @@ struct QuickAddWaterIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        let repository = JSONHydrationRepository()
+        let repository = SQLiteHydrationRepository()
         let amount = HydrationValidation.validatedDefaultAmount(amountML)
         try await repository.appendLog(HydrationLog(amountML: amount, source: .widget))
         WidgetCenter.shared.reloadAllTimelines()
