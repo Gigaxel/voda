@@ -1,6 +1,14 @@
 import XCTest
 @testable import Aqualume
 
+private final class TestClock: @unchecked Sendable {
+    var current: Date
+
+    init(current: Date) {
+        self.current = current
+    }
+}
+
 final class HydrationLogicTests: XCTestCase {
     func testQuickAmountsMatchMVP() {
         XCTAssertEqual(HydrationValidation.quickAmountsML, [100, 250, 330, 500])
@@ -62,5 +70,27 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(HydrationValidation.validatedGoal(20_000), 10_000)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(1), 25)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(4_000), 2_000)
+    }
+
+    @MainActor
+    func testLoadRefreshesCurrentDateKeyAfterDayChanges() async {
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDay = Date(timeIntervalSince1970: 1_000_000)
+        let secondDay = firstDay.addingTimeInterval(86_400)
+        let clock = TestClock(current: firstDay)
+        let repository = InMemoryHydrationRepository()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { clock.current }
+        )
+
+        XCTAssertEqual(state.currentDateKey, HydrationCalculator(calendar: calendar).dateKey(for: firstDay))
+
+        clock.current = secondDay
+        await state.load()
+
+        XCTAssertEqual(state.currentDateKey, HydrationCalculator(calendar: calendar).dateKey(for: secondDay))
     }
 }

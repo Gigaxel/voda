@@ -96,8 +96,11 @@ struct AqualumeRootView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
-            .task(id: hydrationAppIconName) {
+            .task(id: hydrationAppIconTaskID) {
                 await AqualumeAlternateAppIcon.apply(name: hydrationAppIconName)
+            }
+            .task(id: state.currentDateKey) {
+                await refreshAfterNextDayStarts()
             }
         }
     }
@@ -139,6 +142,20 @@ struct AqualumeRootView: View {
     private var hydrationAppIconName: String? {
         guard !state.hasReachedGoal else { return nil }
         return state.progress >= 0.5 ? "AppIconMid" : "AppIconEmpty"
+    }
+
+    private var hydrationAppIconTaskID: String {
+        "\(state.currentDateKey)-\(hydrationAppIconName ?? "full")"
+    }
+
+    private func refreshAfterNextDayStarts() async {
+        let calendar = Calendar.current
+        let nextDay = calendar.startOfDay(for: Date().addingTimeInterval(86_400))
+            .addingTimeInterval(1)
+        let interval = max(1, nextDay.timeIntervalSinceNow)
+        try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+        guard !Task.isCancelled else { return }
+        state.refreshForCurrentDate()
     }
 }
 

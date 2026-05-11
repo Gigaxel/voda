@@ -11,6 +11,7 @@ public final class HydrationAppState: ObservableObject {
     @Published public private(set) var latestAddedAmountML: Int?
     @Published public private(set) var statusMessage: String?
     @Published public private(set) var healthKitState: HealthKitAuthorizationState = .notDetermined
+    @Published public private(set) var currentDateKey: String = HydrationCalculator().dateKey(for: Date())
 
     private let hydrationRepository: HydrationRepository
     private let settingsRepository: SettingsRepository
@@ -36,6 +37,7 @@ public final class HydrationAppState: ObservableObject {
         self.sync = sync
         self.calculator = calculator
         self.now = now
+        self.currentDateKey = calculator.dateKey(for: now())
     }
 
     public var todayTotalML: Int {
@@ -59,11 +61,20 @@ public final class HydrationAppState: ObservableObject {
     }
 
     public var sevenDaySummaries: [DailyHydrationSummary] {
-        calculator.summaries(endingOn: now(), days: 7, logs: logs, goalML: settings.dailyGoalML)
+        summaries(days: 7)
+    }
+
+    public func summaries(days: Int) -> [DailyHydrationSummary] {
+        calculator.summaries(endingOn: now(), days: days, logs: logs, goalML: settings.dailyGoalML)
+    }
+
+    public func refreshForCurrentDate() {
+        currentDateKey = calculator.dateKey(for: now())
     }
 
     public func load() async {
         do {
+            refreshForCurrentDate()
             logs = try await hydrationRepository.loadLogs()
             settings = try await settingsRepository.loadSettings()
             healthKitState = await healthKit.authorizationState()
@@ -78,6 +89,7 @@ public final class HydrationAppState: ObservableObject {
     }
 
     public func log(amountML: Int, source: HydrationLogSource = .iPhone) async {
+        refreshForCurrentDate()
         let safeAmount = HydrationValidation.validatedDefaultAmount(amountML)
         var log = HydrationLog(amountML: safeAmount, loggedAt: now(), source: source)
 
@@ -102,6 +114,7 @@ public final class HydrationAppState: ObservableObject {
     }
 
     public func undoLatest() async {
+        refreshForCurrentDate()
         guard let latest = calculator.latestLog(on: now(), logs: logs) else { return }
         do {
             try await hydrationRepository.removeLog(id: latest.id)
@@ -117,6 +130,7 @@ public final class HydrationAppState: ObservableObject {
     }
 
     public func updateSettings(_ update: (inout UserHydrationSettings) -> Void) async {
+        refreshForCurrentDate()
         var next = settings
         update(&next)
         next.dailyGoalML = HydrationValidation.validatedGoal(next.dailyGoalML)
