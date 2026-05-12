@@ -9,6 +9,33 @@ private final class TestClock: @unchecked Sendable {
     }
 }
 
+private final class RecordingReminderScheduler: ReminderScheduling, @unchecked Sendable {
+    var scheduledStreakStatuses: [HydrationStreakStatus] = []
+    var notifiedStreakStatuses: [HydrationStreakStatus] = []
+    var cancelledStreakNotifications = 0
+
+    func authorizationStatus() async -> Bool { true }
+    func requestAuthorization() async throws -> Bool { true }
+    func scheduleReminders(settings: UserHydrationSettings) async throws {}
+    func cancelReminders() async {}
+
+    func scheduleStreakReminder(
+        settings: UserHydrationSettings,
+        status: HydrationStreakStatus,
+        date: Date
+    ) async throws {
+        scheduledStreakStatuses.append(status)
+    }
+
+    func notifyStreakGoalReached(settings: UserHydrationSettings, status: HydrationStreakStatus) async throws {
+        notifiedStreakStatuses.append(status)
+    }
+
+    func cancelStreakNotifications() async {
+        cancelledStreakNotifications += 1
+    }
+}
+
 final class HydrationLogicTests: XCTestCase {
     func testQuickAmountsMatchMVP() {
         XCTAssertEqual(HydrationValidation.quickAmountsML, [100, 250, 330, 500])
@@ -59,10 +86,87 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(calculator.latestLog(on: day, logs: [old, second, first]), second)
     }
 
+    func testStreakCarriesUntilTodayIsMissed() {
+        let calendar = Calendar(identifier: .gregorian)
+        let calculator = HydrationCalculator(calendar: calendar)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let twoDaysAgo = date(year: 2026, month: 5, day: 9, calendar: calendar)
+        let logs = [
+            HydrationLog(amountML: 2_000, loggedAt: twoDaysAgo, source: .iPhone),
+            HydrationLog(amountML: 2_000, loggedAt: yesterday, source: .iPhone)
+        ]
+
+        let status = calculator.streakStatus(endingOn: today, logs: logs, goalML: 2_000)
+
+        XCTAssertEqual(status.currentDays, 2)
+        XCTAssertEqual(status.bestDays, 2)
+        XCTAssertFalse(status.achievedToday)
+    }
+
+    func testStreakIncludesTodayAfterGoalReached() {
+        let calendar = Calendar(identifier: .gregorian)
+        let calculator = HydrationCalculator(calendar: calendar)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let logs = [
+            HydrationLog(amountML: 2_000, loggedAt: yesterday, source: .iPhone),
+            HydrationLog(amountML: 2_000, loggedAt: today, source: .iPhone)
+        ]
+
+        let status = calculator.streakStatus(endingOn: today, logs: logs, goalML: 2_000)
+
+        XCTAssertEqual(status.currentDays, 2)
+        XCTAssertEqual(status.bestDays, 2)
+        XCTAssertTrue(status.achievedToday)
+    }
+
+    func testStreakResetsAfterMissedCompletedDay() {
+        let calendar = Calendar(identifier: .gregorian)
+        let calculator = HydrationCalculator(calendar: calendar)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let threeDaysAgo = date(year: 2026, month: 5, day: 8, calendar: calendar)
+        let logs = [
+            HydrationLog(amountML: 2_000, loggedAt: threeDaysAgo, source: .iPhone)
+        ]
+
+        let status = calculator.streakStatus(endingOn: today, logs: logs, goalML: 2_000)
+
+        XCTAssertEqual(status.currentDays, 0)
+        XCTAssertEqual(status.bestDays, 1)
+    }
+
     func testUnitFormatting() {
         XCTAssertEqual(HydrationAmountFormatter.amount(250, unitSystem: .metric), "250 ml")
-        XCTAssertEqual(HydrationAmountFormatter.amount(2_000, unitSystem: .metric), "2 L")
+        XCTAssertEqual(HydrationAmountFormatter.amount(2_000, unitSystem: .metric), "2.00 L")
+        XCTAssertEqual(HydrationAmountFormatter.amount(3_250, unitSystem: .metric), "3.25 L")
         XCTAssertEqual(HydrationAmountFormatter.milliliters(fromOunces: 8), 237)
+    }
+
+    func testDailySummariesUseGoalSnapshotForEachDay() {
+        let calendar = Calendar(identifier: .gregorian)
+        let calculator = HydrationCalculator(calendar: calendar)
+        let firstDay = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let secondDay = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let logs = [
+            HydrationLog(amountML: 1_500, loggedAt: firstDay, source: .iPhone),
+            HydrationLog(amountML: 1_500, loggedAt: secondDay, source: .iPhone)
+        ]
+        let snapshots = [
+            calculator.dateKey(for: firstDay): 1_500,
+            calculator.dateKey(for: secondDay): 3_000
+        ]
+
+        let summaries = calculator.summaries(
+            endingOn: secondDay,
+            days: 2,
+            logs: logs,
+            goalML: 2_000,
+            dailyGoalMLByDateKey: snapshots
+        )
+
+        XCTAssertEqual(summaries.map(\.goalML), [1_500, 3_000])
+        XCTAssertEqual(summaries.map(\.progress), [1, 0.5])
     }
 
     func testSettingsValidation() {
@@ -70,6 +174,32 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(HydrationValidation.validatedGoal(20_000), 10_000)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(1), 25)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(4_000), 2_000)
+    }
+
+    @MainActor
+    func testStreakNotificationIsSentOnceWhenGoalIsReached() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let clock = TestClock(current: today)
+        let settings = UserHydrationSettings(
+            dailyGoalML: 500,
+            streakNotificationsEnabled: true
+        )
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let reminders = RecordingReminderScheduler()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            reminders: reminders,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { clock.current }
+        )
+
+        await state.load()
+        await state.log(amountML: 500)
+        await state.log(amountML: 100)
+
+        XCTAssertEqual(reminders.notifiedStreakStatuses.map(\.currentDays), [1])
     }
 
     @MainActor
@@ -92,5 +222,36 @@ final class HydrationLogicTests: XCTestCase {
         await state.load()
 
         XCTAssertEqual(state.currentDateKey, HydrationCalculator(calendar: calendar).dateKey(for: secondDay))
+    }
+
+    @MainActor
+    func testAppStateSnapshotsDailyGoalsForHistory() async {
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDay = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let secondDay = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let clock = TestClock(current: firstDay)
+        let settings = UserHydrationSettings(dailyGoalML: 1_500)
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { clock.current }
+        )
+
+        await state.load()
+        await state.log(amountML: 1_500)
+
+        clock.current = secondDay
+        await state.updateSettings { $0.dailyGoalML = 3_000 }
+        await state.log(amountML: 1_500)
+
+        let summaries = state.summaries(days: 2)
+        XCTAssertEqual(summaries.map(\.goalML), [1_500, 3_000])
+        XCTAssertEqual(summaries.map(\.progress), [1, 0.5])
+    }
+
+    private func date(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
 }

@@ -13,6 +13,11 @@ public protocol SettingsRepository: Sendable {
     func saveSettings(_ settings: UserHydrationSettings) async throws
 }
 
+public protocol DailyGoalRepository: Sendable {
+    func loadDailyGoalSnapshots() async throws -> [String: Int]
+    func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws
+}
+
 public enum RepositoryLocation {
     public static let appGroupID = "group.com.gigaxel.aqualume"
 
@@ -27,7 +32,7 @@ public enum RepositoryLocation {
     }
 }
 
-public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository {
+public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository, DailyGoalRepository {
     private let fileURL: URL
 
     public init(directory: URL = RepositoryLocation.sharedDirectory()) {
@@ -75,15 +80,35 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository 
         let database = try SQLiteDatabase(fileURL: fileURL)
         try SQLiteHydrationStore.saveSettings(normalized, into: database)
     }
+
+    public func loadDailyGoalSnapshots() async throws -> [String: Int] {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        return try SQLiteHydrationStore.loadDailyGoalSnapshots(from: database)
+    }
+
+    public func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        try SQLiteHydrationStore.saveDailyGoalSnapshot(
+            dateKey: dateKey,
+            goalML: HydrationValidation.validatedGoal(goalML),
+            into: database
+        )
+    }
 }
 
-public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepository {
+public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepository, DailyGoalRepository {
     private var logs: [HydrationLog]
     private var settings: UserHydrationSettings
+    private var dailyGoalSnapshots: [String: Int]
 
-    public init(logs: [HydrationLog] = [], settings: UserHydrationSettings = UserHydrationSettings()) {
+    public init(
+        logs: [HydrationLog] = [],
+        settings: UserHydrationSettings = UserHydrationSettings(),
+        dailyGoalSnapshots: [String: Int] = [:]
+    ) {
         self.logs = logs
         self.settings = settings
+        self.dailyGoalSnapshots = dailyGoalSnapshots
     }
 
     public func loadLogs() async throws -> [HydrationLog] {
@@ -112,6 +137,14 @@ public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepositor
         normalized.dailyGoalML = HydrationValidation.validatedGoal(settings.dailyGoalML)
         normalized.defaultAmountML = HydrationValidation.validatedDefaultAmount(settings.defaultAmountML)
         self.settings = normalized
+    }
+
+    public func loadDailyGoalSnapshots() async throws -> [String: Int] {
+        dailyGoalSnapshots
+    }
+
+    public func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws {
+        dailyGoalSnapshots[dateKey] = HydrationValidation.validatedGoal(goalML)
     }
 }
 
@@ -285,11 +318,25 @@ private enum SQLiteHydrationStore {
                 reminder_start_hour INTEGER NOT NULL,
                 reminder_end_hour INTEGER NOT NULL,
                 reminder_interval_minutes INTEGER NOT NULL,
+                streak_notifications_enabled INTEGER NOT NULL DEFAULT 0,
                 healthkit_enabled INTEGER NOT NULL
             );
             """
         )
-        try database.execute("PRAGMA user_version = 1;")
+        try database.execute(
+            """
+            CREATE TABLE IF NOT EXISTS daily_goal_snapshots (
+                date_key TEXT PRIMARY KEY NOT NULL,
+                goal_ml INTEGER NOT NULL
+            );
+            """
+        )
+        if try !settingsTableHasColumn("streak_notifications_enabled", in: database) {
+            try database.execute(
+                "ALTER TABLE settings ADD COLUMN streak_notifications_enabled INTEGER NOT NULL DEFAULT 0;"
+            )
+        }
+        try database.execute("PRAGMA user_version = 3;")
     }
 
     static func loadLogs(from database: SQLiteDatabase) throws -> [HydrationLog] {
@@ -363,6 +410,7 @@ private enum SQLiteHydrationStore {
                reminder_start_hour,
                reminder_end_hour,
                reminder_interval_minutes,
+               streak_notifications_enabled,
                healthkit_enabled
         FROM settings
         WHERE id = 1;
@@ -395,7 +443,8 @@ private enum SQLiteHydrationStore {
             glassDesign: glassDesign,
             remindersEnabled: sqlite3_column_int64(statement, 4) == 1,
             reminderSchedule: reminderSchedule,
-            healthKitEnabled: sqlite3_column_int64(statement, 8) == 1
+            streakNotificationsEnabled: sqlite3_column_int64(statement, 8) == 1,
+            healthKitEnabled: sqlite3_column_int64(statement, 9) == 1
         )
     }
 
@@ -411,9 +460,10 @@ private enum SQLiteHydrationStore {
             reminder_start_hour,
             reminder_end_hour,
             reminder_interval_minutes,
+            streak_notifications_enabled,
             healthkit_enabled
         )
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             daily_goal_ml = excluded.daily_goal_ml,
             default_amount_ml = excluded.default_amount_ml,
@@ -423,6 +473,7 @@ private enum SQLiteHydrationStore {
             reminder_start_hour = excluded.reminder_start_hour,
             reminder_end_hour = excluded.reminder_end_hour,
             reminder_interval_minutes = excluded.reminder_interval_minutes,
+            streak_notifications_enabled = excluded.streak_notifications_enabled,
             healthkit_enabled = excluded.healthkit_enabled;
         """
         let statement = try database.prepare(sql)
@@ -436,8 +487,69 @@ private enum SQLiteHydrationStore {
         try database.bind(settings.reminderSchedule.startHour, at: 6, in: statement)
         try database.bind(settings.reminderSchedule.endHour, at: 7, in: statement)
         try database.bind(settings.reminderSchedule.intervalMinutes, at: 8, in: statement)
-        try database.bind(settings.healthKitEnabled, at: 9, in: statement)
+        try database.bind(settings.streakNotificationsEnabled, at: 9, in: statement)
+        try database.bind(settings.healthKitEnabled, at: 10, in: statement)
         try database.stepDone(statement, sql: sql)
+    }
+
+    static func loadDailyGoalSnapshots(from database: SQLiteDatabase) throws -> [String: Int] {
+        let sql = """
+        SELECT date_key, goal_ml
+        FROM daily_goal_snapshots;
+        """
+        let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        var snapshots: [String: Int] = [:]
+        var result = sqlite3_step(statement)
+        while result == SQLITE_ROW {
+            if let dateKey = columnString(statement, 0) {
+                snapshots[dateKey] = Int(sqlite3_column_int64(statement, 1))
+            }
+            result = sqlite3_step(statement)
+        }
+
+        guard result == SQLITE_DONE else {
+            throw SQLiteHydrationStoreError.step(sql: sql, message: database.errorMessage)
+        }
+
+        return snapshots
+    }
+
+    static func saveDailyGoalSnapshot(dateKey: String, goalML: Int, into database: SQLiteDatabase) throws {
+        let sql = """
+        INSERT INTO daily_goal_snapshots (
+            date_key,
+            goal_ml
+        )
+        VALUES (?, ?)
+        ON CONFLICT(date_key) DO UPDATE SET
+            goal_ml = excluded.goal_ml;
+        """
+        let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        try database.bind(dateKey, at: 1, in: statement)
+        try database.bind(goalML, at: 2, in: statement)
+        try database.stepDone(statement, sql: sql)
+    }
+
+    private static func settingsTableHasColumn(_ column: String, in database: SQLiteDatabase) throws -> Bool {
+        let statement = try database.prepare("PRAGMA table_info(settings);")
+        defer { sqlite3_finalize(statement) }
+
+        var result = sqlite3_step(statement)
+        while result == SQLITE_ROW {
+            if columnString(statement, 1) == column {
+                return true
+            }
+            result = sqlite3_step(statement)
+        }
+
+        guard result == SQLITE_DONE else {
+            throw SQLiteHydrationStoreError.step(sql: "PRAGMA table_info(settings);", message: database.errorMessage)
+        }
+        return false
     }
 
     private static func columnString(_ statement: OpaquePointer?, _ index: Int32) -> String? {

@@ -223,6 +223,11 @@ struct QuickAddWaterIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let repository = SQLiteHydrationRepository()
         let amount = HydrationValidation.validatedDefaultAmount(amountML)
+        let settings = try await repository.loadSettings()
+        try await repository.saveDailyGoalSnapshot(
+            dateKey: HydrationCalculator().dateKey(for: Date()),
+            goalML: settings.dailyGoalML
+        )
         try await repository.appendLog(HydrationLog(amountML: amount, source: .widget))
         WidgetCenter.shared.reloadAllTimelines()
         return .result()

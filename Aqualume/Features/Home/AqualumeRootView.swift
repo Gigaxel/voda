@@ -17,7 +17,7 @@ struct AqualumeRootView: View {
             ZStack {
                 AqualumeBackground()
 
-                VStack(spacing: 22) {
+                VStack(spacing: 20) {
                     ProgressReadout(
                         totalML: state.todayTotalML,
                         goalML: state.settings.dailyGoalML,
@@ -38,7 +38,8 @@ struct AqualumeRootView: View {
                             await log(amountML: state.settings.defaultAmountML)
                         }
                     }
-                    .frame(maxWidth: 310, maxHeight: 390)
+                    .frame(maxWidth: 360, maxHeight: 500)
+                    .layoutPriority(1)
                     .accessibilityLabel("Hydration glass")
                     .accessibilityValue("\(HydrationAmountFormatter.amount(state.todayTotalML, unitSystem: state.settings.unitSystem)) of \(HydrationAmountFormatter.amount(state.settings.dailyGoalML, unitSystem: state.settings.unitSystem))")
                     .accessibilityHint("Adds your default amount")
@@ -66,13 +67,10 @@ struct AqualumeRootView: View {
                         }
                         .buttonStyle(AqualumeHomeActionButtonStyle())
                     }
-
-                    HistoryMiniChart(summaries: state.sevenDaySummaries)
-                        .frame(height: 74)
-                        .padding(.top, 4)
                 }
                 .padding(.horizontal, 24)
-                .padding(.vertical, 18)
+                .padding(.top, 18)
+                .padding(.bottom, 28)
 
                 ConfettiCelebrationView(
                     trigger: celebrationID,

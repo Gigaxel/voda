@@ -12,18 +12,22 @@ public final class HydrationAppState: ObservableObject {
     @Published public private(set) var statusMessage: String?
     @Published public private(set) var healthKitState: HealthKitAuthorizationState = .notDetermined
     @Published public private(set) var currentDateKey: String = HydrationCalculator().dateKey(for: Date())
+    @Published public private(set) var dailyGoalSnapshots: [String: Int] = [:]
 
     private let hydrationRepository: HydrationRepository
     private let settingsRepository: SettingsRepository
+    private let dailyGoalRepository: DailyGoalRepository?
     private let healthKit: HealthKitWaterWriting
     private let reminders: ReminderScheduling
     private let sync: HydrationSyncing
     private let calculator: HydrationCalculator
     private let now: @Sendable () -> Date
+    private var lastStreakNotificationDateKey: String?
 
     public init(
         hydrationRepository: HydrationRepository,
         settingsRepository: SettingsRepository,
+        dailyGoalRepository: DailyGoalRepository? = nil,
         healthKit: HealthKitWaterWriting = NoOpHealthKitService(),
         reminders: ReminderScheduling = NoOpReminderScheduler(),
         sync: HydrationSyncing = NoOpHydrationSyncService(),
@@ -32,6 +36,9 @@ public final class HydrationAppState: ObservableObject {
     ) {
         self.hydrationRepository = hydrationRepository
         self.settingsRepository = settingsRepository
+        self.dailyGoalRepository = dailyGoalRepository
+            ?? hydrationRepository as? DailyGoalRepository
+            ?? settingsRepository as? DailyGoalRepository
         self.healthKit = healthKit
         self.reminders = reminders
         self.sync = sync
@@ -52,6 +59,15 @@ public final class HydrationAppState: ObservableObject {
         todayTotalML >= settings.dailyGoalML
     }
 
+    public var streakStatus: HydrationStreakStatus {
+        calculator.streakStatus(
+            endingOn: now(),
+            logs: logs,
+            goalML: settings.dailyGoalML,
+            dailyGoalMLByDateKey: dailyGoalSnapshotsIncludingToday
+        )
+    }
+
     public var canUndo: Bool {
         calculator.latestLog(on: now(), logs: logs) != nil
     }
@@ -65,7 +81,13 @@ public final class HydrationAppState: ObservableObject {
     }
 
     public func summaries(days: Int) -> [DailyHydrationSummary] {
-        calculator.summaries(endingOn: now(), days: days, logs: logs, goalML: settings.dailyGoalML)
+        calculator.summaries(
+            endingOn: now(),
+            days: days,
+            logs: logs,
+            goalML: settings.dailyGoalML,
+            dailyGoalMLByDateKey: dailyGoalSnapshotsIncludingToday
+        )
     }
 
     public func refreshForCurrentDate() {
@@ -77,8 +99,11 @@ public final class HydrationAppState: ObservableObject {
             refreshForCurrentDate()
             logs = try await hydrationRepository.loadLogs()
             settings = try await settingsRepository.loadSettings()
+            dailyGoalSnapshots = (try await dailyGoalRepository?.loadDailyGoalSnapshots()) ?? [:]
+            try await saveCurrentGoalSnapshotIfNeeded()
             healthKitState = await healthKit.authorizationState()
             await sync.activate()
+            await refreshStreakReminder()
         } catch {
             statusMessage = "Unable to load hydration data."
         }
@@ -91,9 +116,11 @@ public final class HydrationAppState: ObservableObject {
     public func log(amountML: Int, source: HydrationLogSource = .iPhone) async {
         refreshForCurrentDate()
         let safeAmount = HydrationValidation.validatedDefaultAmount(amountML)
+        let hadReachedGoal = hasReachedGoal
         var log = HydrationLog(amountML: safeAmount, loggedAt: now(), source: source)
 
         do {
+            try await saveCurrentGoalSnapshotIfNeeded()
             try await hydrationRepository.appendLog(log)
             if settings.healthKitEnabled {
                 do {
@@ -107,6 +134,10 @@ public final class HydrationAppState: ObservableObject {
             logs = try await hydrationRepository.loadLogs()
             latestAddedAmountML = safeAmount
             await sync.sendLog(log)
+            if !hadReachedGoal && hasReachedGoal {
+                await notifyStreakGoalReachedIfNeeded()
+            }
+            await refreshStreakReminder()
             reloadWidgets()
         } catch {
             statusMessage = "Unable to save water."
@@ -123,6 +154,7 @@ public final class HydrationAppState: ObservableObject {
             }
             logs = try await hydrationRepository.loadLogs()
             latestAddedAmountML = nil
+            await refreshStreakReminder()
             reloadWidgets()
         } catch {
             statusMessage = "Unable to undo latest log."
@@ -138,11 +170,13 @@ public final class HydrationAppState: ObservableObject {
         do {
             try await settingsRepository.saveSettings(next)
             settings = try await settingsRepository.loadSettings()
+            try await saveCurrentGoalSnapshotIfNeeded()
             if settings.remindersEnabled {
                 try await reminders.scheduleReminders(settings: settings)
             } else {
                 await reminders.cancelReminders()
             }
+            await refreshStreakReminder()
             await sync.sendSettings(settings)
             reloadWidgets()
         } catch {
@@ -165,5 +199,42 @@ public final class HydrationAppState: ObservableObject {
         #if os(iOS)
         WidgetCenter.shared.reloadAllTimelines()
         #endif
+    }
+
+    private var dailyGoalSnapshotsIncludingToday: [String: Int] {
+        var snapshots = dailyGoalSnapshots
+        snapshots[calculator.dateKey(for: now())] = settings.dailyGoalML
+        return snapshots
+    }
+
+    private func saveCurrentGoalSnapshotIfNeeded() async throws {
+        let dateKey = calculator.dateKey(for: now())
+        let goalML = settings.dailyGoalML
+        guard dailyGoalSnapshots[dateKey] != goalML else { return }
+        try await dailyGoalRepository?.saveDailyGoalSnapshot(dateKey: dateKey, goalML: goalML)
+        dailyGoalSnapshots[dateKey] = goalML
+    }
+
+    private func refreshStreakReminder() async {
+        do {
+            if settings.streakNotificationsEnabled {
+                try await reminders.scheduleStreakReminder(settings: settings, status: streakStatus, date: now())
+            } else {
+                await reminders.cancelStreakNotifications()
+            }
+        } catch {
+            statusMessage = "Unable to update streak notifications."
+        }
+    }
+
+    private func notifyStreakGoalReachedIfNeeded() async {
+        let status = streakStatus
+        guard lastStreakNotificationDateKey != status.dateKey else { return }
+        do {
+            try await reminders.notifyStreakGoalReached(settings: settings, status: status)
+            lastStreakNotificationDateKey = status.dateKey
+        } catch {
+            statusMessage = "Unable to send streak notification."
+        }
     }
 }

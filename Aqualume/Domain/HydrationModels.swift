@@ -69,6 +69,7 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
     public var glassDesign: HydrationGlassDesign
     public var remindersEnabled: Bool
     public var reminderSchedule: ReminderSchedule
+    public var streakNotificationsEnabled: Bool
     public var healthKitEnabled: Bool
 
     public init(
@@ -78,6 +79,7 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         glassDesign: HydrationGlassDesign = .tumbler,
         remindersEnabled: Bool = false,
         reminderSchedule: ReminderSchedule = ReminderSchedule(),
+        streakNotificationsEnabled: Bool = false,
         healthKitEnabled: Bool = false
     ) {
         self.dailyGoalML = dailyGoalML
@@ -86,6 +88,7 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.glassDesign = glassDesign
         self.remindersEnabled = remindersEnabled
         self.reminderSchedule = reminderSchedule
+        self.streakNotificationsEnabled = streakNotificationsEnabled
         self.healthKitEnabled = healthKitEnabled
     }
 
@@ -96,6 +99,7 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         case glassDesign
         case remindersEnabled
         case reminderSchedule
+        case streakNotificationsEnabled
         case healthKitEnabled
     }
 
@@ -107,6 +111,7 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         glassDesign = try container.decodeIfPresent(HydrationGlassDesign.self, forKey: .glassDesign) ?? .tumbler
         remindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? false
         reminderSchedule = try container.decodeIfPresent(ReminderSchedule.self, forKey: .reminderSchedule) ?? ReminderSchedule()
+        streakNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .streakNotificationsEnabled) ?? false
         healthKitEnabled = try container.decodeIfPresent(Bool.self, forKey: .healthKitEnabled) ?? false
     }
 }
@@ -121,6 +126,36 @@ public struct DailyHydrationSummary: Identifiable, Equatable, Sendable {
     public var progress: Double {
         guard goalML > 0 else { return 0 }
         return min(Double(totalML) / Double(goalML), 1)
+    }
+
+    public var reachedGoal: Bool {
+        totalML >= goalML
+    }
+}
+
+public struct HydrationStreakStatus: Equatable, Sendable {
+    public var currentDays: Int
+    public var bestDays: Int
+    public var goalDays: Int
+    public var achievedToday: Bool
+    public var dateKey: String
+
+    public var nextMilestone: Int {
+        [3, 7, 14, 30, 60, 90, 180, 365].first { $0 > currentDays } ?? currentDays + 50
+    }
+
+    public init(
+        currentDays: Int,
+        bestDays: Int,
+        goalDays: Int,
+        achievedToday: Bool,
+        dateKey: String
+    ) {
+        self.currentDays = currentDays
+        self.bestDays = bestDays
+        self.goalDays = goalDays
+        self.achievedToday = achievedToday
+        self.dateKey = dateKey
     }
 }
 

@@ -12,10 +12,23 @@ struct AqualumeApp: App {
         let reminders: ReminderScheduling = LocalReminderScheduler()
         let sync: HydrationSyncing = WatchConnectivityHydrationSyncService(
             onLog: { log in
-                Task { try? await repository.appendLog(log) }
+                Task {
+                    let settings = (try? await repository.loadSettings()) ?? UserHydrationSettings()
+                    try? await repository.saveDailyGoalSnapshot(
+                        dateKey: HydrationCalculator().dateKey(for: log.loggedAt),
+                        goalML: settings.dailyGoalML
+                    )
+                    try? await repository.appendLog(log)
+                }
             },
             onSettings: { settings in
-                Task { try? await repository.saveSettings(settings) }
+                Task {
+                    try? await repository.saveSettings(settings)
+                    try? await repository.saveDailyGoalSnapshot(
+                        dateKey: HydrationCalculator().dateKey(for: Date()),
+                        goalML: settings.dailyGoalML
+                    )
+                }
             }
         )
         #else

@@ -41,19 +41,73 @@ public struct HydrationCalculator: Sendable {
         endingOn endDate: Date,
         days: Int,
         logs: [HydrationLog],
-        goalML: Int
+        goalML: Int,
+        dailyGoalMLByDateKey: [String: Int] = [:]
     ) -> [DailyHydrationSummary] {
         guard days > 0 else { return [] }
         return (0..<days).reversed().compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: -offset, to: endDate) else {
                 return nil
             }
+            let dateKey = dateKey(for: date)
             return DailyHydrationSummary(
-                dateKey: dateKey(for: date),
+                dateKey: dateKey,
                 date: date,
                 totalML: total(on: date, logs: logs),
-                goalML: goalML
+                goalML: dailyGoalMLByDateKey[dateKey] ?? goalML
             )
         }
+    }
+
+    public func streakStatus(
+        endingOn endDate: Date,
+        logs: [HydrationLog],
+        goalML: Int,
+        dailyGoalMLByDateKey: [String: Int] = [:]
+    ) -> HydrationStreakStatus {
+        let today = calendar.startOfDay(for: endDate)
+        let startDate = logs.map { calendar.startOfDay(for: $0.loggedAt) }.min() ?? today
+        let dayCount = max(
+            (calendar.dateComponents([.day], from: startDate, to: today).day ?? 0) + 1,
+            1
+        )
+        let dailySummaries = summaries(
+            endingOn: today,
+            days: dayCount,
+            logs: logs,
+            goalML: goalML,
+            dailyGoalMLByDateKey: dailyGoalMLByDateKey
+        )
+
+        var bestDays = 0
+        var runDays = 0
+        var goalDays = 0
+        for summary in dailySummaries {
+            if summary.reachedGoal {
+                runDays += 1
+                goalDays += 1
+                bestDays = max(bestDays, runDays)
+            } else {
+                runDays = 0
+            }
+        }
+
+        let achievedToday = dailySummaries.last?.reachedGoal ?? false
+        var currentDays = achievedToday ? 1 : 0
+        var index = dailySummaries.count - 2
+
+        while index >= 0 {
+            guard dailySummaries[index].reachedGoal else { break }
+            currentDays += 1
+            index -= 1
+        }
+
+        return HydrationStreakStatus(
+            currentDays: currentDays,
+            bestDays: bestDays,
+            goalDays: goalDays,
+            achievedToday: achievedToday,
+            dateKey: dateKey(for: today)
+        )
     }
 }

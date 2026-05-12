@@ -22,6 +22,7 @@ struct HistoryView: View {
             Section {
                 HistoryStatsGrid(
                     summaries: summaries,
+                    streakStatus: state.streakStatus,
                     unitSystem: state.settings.unitSystem
                 )
             }
@@ -88,6 +89,7 @@ private enum HistoryRange: String, CaseIterable, Identifiable {
 
 private struct HistoryStatsGrid: View {
     let summaries: [DailyHydrationSummary]
+    let streakStatus: HydrationStreakStatus
     let unitSystem: HydrationUnitSystem
 
     var body: some View {
@@ -95,7 +97,12 @@ private struct HistoryStatsGrid: View {
             GridRow {
                 HistoryMetric(title: "Average", value: averageText)
                 HistoryMetric(title: "Goal days", value: "\(goalDays)")
-                HistoryMetric(title: "Best", value: bestText)
+                HistoryMetric(title: "Top day", value: bestText)
+            }
+            GridRow {
+                HistoryMetric(title: "Current streak", value: "\(streakStatus.currentDays)d")
+                HistoryMetric(title: "Best streak", value: "\(streakStatus.bestDays)d")
+                HistoryMetric(title: "Next", value: "\(streakStatus.nextMilestone)d")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -336,7 +343,8 @@ private struct HistoryCalendarHeatmap: View {
 
     private func accessibilityValue(for summary: DailyHydrationSummary) -> String {
         let amount = HydrationAmountFormatter.amount(summary.totalML, unitSystem: unitSystem)
-        return "\(amount), \(Int(summary.progress * 100)) percent of goal"
+        let goal = HydrationAmountFormatter.amount(summary.goalML, unitSystem: unitSystem)
+        return "\(amount), \(Int(summary.progress * 100)) percent of \(goal) goal"
     }
 }
 
@@ -361,7 +369,7 @@ private struct HistorySummaryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(summary.date, format: .dateTime.weekday(.wide).month().day())
                     .font(.headline)
-                Text("\(Int(summary.progress * 100))% of goal")
+                Text("\(Int(summary.progress * 100))% of \(goalText) goal")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -370,5 +378,9 @@ private struct HistorySummaryRow: View {
                 .font(.system(.title3, design: .rounded, weight: .semibold))
         }
         .padding(.vertical, 6)
+    }
+
+    private var goalText: String {
+        HydrationAmountFormatter.amount(summary.goalML, unitSystem: unitSystem)
     }
 }

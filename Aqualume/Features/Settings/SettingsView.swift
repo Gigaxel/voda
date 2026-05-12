@@ -36,6 +36,12 @@ struct SettingsView: View {
                     Stepper("Every \(state.settings.reminderSchedule.intervalMinutes) min", value: intervalBinding, in: 60...240, step: 30)
                 }
 
+                Section("Streak") {
+                    LabeledContent("Current", value: "\(state.streakStatus.currentDays)d")
+                    LabeledContent("Best", value: "\(state.streakStatus.bestDays)d")
+                    Toggle("Streak notifications", isOn: streakNotificationBinding)
+                }
+
                 Section("Health") {
                     HStack {
                         Text("HealthKit")
@@ -95,6 +101,13 @@ struct SettingsView: View {
         Binding(
             get: { state.settings.remindersEnabled },
             set: { value in Task { await state.updateSettings { $0.remindersEnabled = value } } }
+        )
+    }
+
+    private var streakNotificationBinding: Binding<Bool> {
+        Binding(
+            get: { state.settings.streakNotificationsEnabled },
+            set: { value in Task { await state.updateSettings { $0.streakNotificationsEnabled = value } } }
         )
     }
 

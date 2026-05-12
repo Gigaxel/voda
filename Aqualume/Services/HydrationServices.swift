@@ -37,6 +37,13 @@ public protocol ReminderScheduling: Sendable {
     func requestAuthorization() async throws -> Bool
     func scheduleReminders(settings: UserHydrationSettings) async throws
     func cancelReminders() async
+    func scheduleStreakReminder(
+        settings: UserHydrationSettings,
+        status: HydrationStreakStatus,
+        date: Date
+    ) async throws
+    func notifyStreakGoalReached(settings: UserHydrationSettings, status: HydrationStreakStatus) async throws
+    func cancelStreakNotifications() async
 }
 
 public struct NoOpReminderScheduler: ReminderScheduling {
@@ -46,6 +53,13 @@ public struct NoOpReminderScheduler: ReminderScheduling {
     public func requestAuthorization() async throws -> Bool { false }
     public func scheduleReminders(settings: UserHydrationSettings) async throws {}
     public func cancelReminders() async {}
+    public func scheduleStreakReminder(
+        settings: UserHydrationSettings,
+        status: HydrationStreakStatus,
+        date: Date
+    ) async throws {}
+    public func notifyStreakGoalReached(settings: UserHydrationSettings, status: HydrationStreakStatus) async throws {}
+    public func cancelStreakNotifications() async {}
 }
 
 public protocol HydrationSyncing: Sendable {
