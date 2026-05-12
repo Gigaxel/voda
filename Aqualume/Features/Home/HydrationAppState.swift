@@ -13,6 +13,7 @@ public final class HydrationAppState: ObservableObject {
     @Published public private(set) var healthKitState: HealthKitAuthorizationState = .notDetermined
     @Published public private(set) var currentDateKey: String = HydrationCalculator().dateKey(for: Date())
     @Published public private(set) var dailyGoalSnapshots: [String: Int] = [:]
+    @Published public private(set) var hasLoaded = false
 
     private let hydrationRepository: HydrationRepository
     private let settingsRepository: SettingsRepository
@@ -104,8 +105,10 @@ public final class HydrationAppState: ObservableObject {
             healthKitState = await healthKit.authorizationState()
             await sync.activate()
             await refreshStreakReminder()
+            hasLoaded = true
         } catch {
             statusMessage = "Unable to load hydration data."
+            hasLoaded = true
         }
     }
 
@@ -167,6 +170,9 @@ public final class HydrationAppState: ObservableObject {
         update(&next)
         next.dailyGoalML = HydrationValidation.validatedGoal(next.dailyGoalML)
         next.defaultAmountML = HydrationValidation.validatedDefaultAmount(next.defaultAmountML)
+        if let weightKG = next.profileWeightKG {
+            next.profileWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
+        }
         do {
             try await settingsRepository.saveSettings(next)
             settings = try await settingsRepository.loadSettings()
@@ -192,6 +198,12 @@ public final class HydrationAppState: ObservableObject {
             }
         } catch {
             statusMessage = "Health permission unavailable."
+        }
+    }
+
+    public func replayOnboardingForDevelopment() async {
+        await updateSettings { settings in
+            settings.hasCompletedOnboarding = false
         }
     }
 

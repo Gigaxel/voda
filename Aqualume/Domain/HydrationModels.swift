@@ -21,6 +21,22 @@ public enum HydrationGlassDesign: String, Codable, CaseIterable, Equatable, Send
     }
 }
 
+public enum HydrationProfileGender: String, Codable, CaseIterable, Equatable, Sendable {
+    case female
+    case male
+    case nonBinary
+    case preferNotToSay
+
+    public var displayName: String {
+        switch self {
+        case .female: "Female"
+        case .male: "Male"
+        case .nonBinary: "Non-binary"
+        case .preferNotToSay: "Prefer not to say"
+        }
+    }
+}
+
 public enum HydrationLogSource: String, Codable, CaseIterable, Equatable, Sendable {
     case iPhone
     case watch
@@ -67,6 +83,9 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
     public var defaultAmountML: Int
     public var unitSystem: HydrationUnitSystem
     public var glassDesign: HydrationGlassDesign
+    public var profileGender: HydrationProfileGender?
+    public var profileWeightKG: Double?
+    public var hasCompletedOnboarding: Bool
     public var remindersEnabled: Bool
     public var reminderSchedule: ReminderSchedule
     public var streakNotificationsEnabled: Bool
@@ -77,6 +96,9 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         defaultAmountML: Int = 250,
         unitSystem: HydrationUnitSystem = .metric,
         glassDesign: HydrationGlassDesign = .tumbler,
+        profileGender: HydrationProfileGender? = nil,
+        profileWeightKG: Double? = nil,
+        hasCompletedOnboarding: Bool = false,
         remindersEnabled: Bool = false,
         reminderSchedule: ReminderSchedule = ReminderSchedule(),
         streakNotificationsEnabled: Bool = false,
@@ -86,6 +108,9 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.defaultAmountML = defaultAmountML
         self.unitSystem = unitSystem
         self.glassDesign = glassDesign
+        self.profileGender = profileGender
+        self.profileWeightKG = profileWeightKG
+        self.hasCompletedOnboarding = hasCompletedOnboarding
         self.remindersEnabled = remindersEnabled
         self.reminderSchedule = reminderSchedule
         self.streakNotificationsEnabled = streakNotificationsEnabled
@@ -97,6 +122,9 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         case defaultAmountML
         case unitSystem
         case glassDesign
+        case profileGender
+        case profileWeightKG
+        case hasCompletedOnboarding
         case remindersEnabled
         case reminderSchedule
         case streakNotificationsEnabled
@@ -109,6 +137,9 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         defaultAmountML = try container.decodeIfPresent(Int.self, forKey: .defaultAmountML) ?? 250
         unitSystem = try container.decodeIfPresent(HydrationUnitSystem.self, forKey: .unitSystem) ?? .metric
         glassDesign = try container.decodeIfPresent(HydrationGlassDesign.self, forKey: .glassDesign) ?? .tumbler
+        profileGender = try container.decodeIfPresent(HydrationProfileGender.self, forKey: .profileGender)
+        profileWeightKG = try container.decodeIfPresent(Double.self, forKey: .profileWeightKG)
+        hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
         remindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? false
         reminderSchedule = try container.decodeIfPresent(ReminderSchedule.self, forKey: .reminderSchedule) ?? ReminderSchedule()
         streakNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .streakNotificationsEnabled) ?? false
@@ -165,6 +196,8 @@ public enum HydrationValidation {
     public static let maximumGoalML = 10_000
     public static let minimumDefaultAmountML = 25
     public static let maximumDefaultAmountML = 2_000
+    public static let minimumProfileWeightKG = 30.0
+    public static let maximumProfileWeightKG = 250.0
 
     public static func validatedGoal(_ value: Int) -> Int {
         min(max(value, minimumGoalML), maximumGoalML)
@@ -172,5 +205,38 @@ public enum HydrationValidation {
 
     public static func validatedDefaultAmount(_ value: Int) -> Int {
         min(max(value, minimumDefaultAmountML), maximumDefaultAmountML)
+    }
+
+    public static func validatedProfileWeightKG(_ value: Double) -> Double {
+        min(max(value, minimumProfileWeightKG), maximumProfileWeightKG)
+    }
+}
+
+public enum HydrationGoalRecommender {
+    private static let poundsPerKilogram = 2.2046226218
+
+    public static func kilograms(fromPounds pounds: Double) -> Double {
+        pounds / poundsPerKilogram
+    }
+
+    public static func pounds(fromKilograms kilograms: Double) -> Double {
+        kilograms * poundsPerKilogram
+    }
+
+    public static func dailyGoalML(weightKG: Double, gender: HydrationProfileGender) -> Int {
+        let safeWeight = HydrationValidation.validatedProfileWeightKG(weightKG)
+        let multiplier: Double
+        switch gender {
+        case .female:
+            multiplier = 31
+        case .male:
+            multiplier = 35
+        case .nonBinary, .preferNotToSay:
+            multiplier = 33
+        }
+
+        let rawGoal = safeWeight * multiplier
+        let roundedGoal = Int((rawGoal / 50).rounded() * 50)
+        return HydrationValidation.validatedGoal(roundedGoal)
     }
 }

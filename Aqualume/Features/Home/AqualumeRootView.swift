@@ -94,6 +94,11 @@ struct AqualumeRootView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            .fullScreenCover(isPresented: onboardingPresented) {
+                OnboardingView()
+                    .environmentObject(state)
+                    .interactiveDismissDisabled()
+            }
             .task(id: hydrationAppIconTaskID) {
                 await AqualumeAlternateAppIcon.apply(name: hydrationAppIconName)
             }
@@ -101,6 +106,13 @@ struct AqualumeRootView: View {
                 await refreshAfterNextDayStarts()
             }
         }
+    }
+
+    private var onboardingPresented: Binding<Bool> {
+        Binding(
+            get: { state.hasLoaded && !state.settings.hasCompletedOnboarding },
+            set: { _ in }
+        )
     }
 
     private func log(amountML: Int) async {
@@ -154,6 +166,194 @@ struct AqualumeRootView: View {
         try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
         guard !Task.isCancelled else { return }
         state.refreshForCurrentDate()
+    }
+}
+
+private enum OnboardingWeightUnit: String, CaseIterable, Identifiable {
+    case kilograms
+    case pounds
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .kilograms: "kg"
+        case .pounds: "lb"
+        }
+    }
+}
+
+private struct OnboardingView: View {
+    @EnvironmentObject private var state: HydrationAppState
+    @State private var gender: HydrationProfileGender = .preferNotToSay
+    @State private var weightUnit: OnboardingWeightUnit = .kilograms
+    @State private var weightValue = 70.0
+    @State private var hasInitialized = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AqualumeBackground()
+
+                Form {
+                    Section {
+                        Text("A good first goal starts with a quick body-weight estimate.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .listRowBackground(Color.clear)
+
+                    Section("Profile") {
+                        Picker("Gender", selection: $gender) {
+                            ForEach(HydrationProfileGender.allCases, id: \.self) { option in
+                                Text(option.displayName).tag(option)
+                            }
+                        }
+
+                        Picker("Weight unit", selection: $weightUnit) {
+                            ForEach(OnboardingWeightUnit.allCases) { unit in
+                                Text(unit.title).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: weightUnit) { oldValue, newValue in
+                            convertWeight(from: oldValue, to: newValue)
+                        }
+
+                        LabeledContent("Weight") {
+                            HStack(spacing: 8) {
+                                TextField("Weight", value: weightBinding, format: .number.precision(.fractionLength(0)))
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(minWidth: 72)
+                                Text(weightUnit.title)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Slider(value: weightBinding, in: weightRange, step: weightStep)
+                            .accessibilityLabel("Weight")
+                            .accessibilityValue(weightText)
+                    }
+
+                    Section("Recommended Daily Goal") {
+                        LabeledContent("Starting goal", value: recommendationText)
+                        Text("You can tune the daily goal later in Settings.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Set Your Goal")
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    Task { await completeOnboarding() }
+                } label: {
+                    Text("Start with \(recommendationText)")
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.05, green: 0.58, blue: 0.48))
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
+            }
+            .onAppear(perform: initializeDefaults)
+        }
+    }
+
+    private var weightRange: ClosedRange<Double> {
+        switch weightUnit {
+        case .kilograms:
+            return HydrationValidation.minimumProfileWeightKG...HydrationValidation.maximumProfileWeightKG
+        case .pounds:
+            let minimum = HydrationGoalRecommender.pounds(
+                fromKilograms: HydrationValidation.minimumProfileWeightKG
+            )
+            let maximum = HydrationGoalRecommender.pounds(
+                fromKilograms: HydrationValidation.maximumProfileWeightKG
+            )
+            return minimum...maximum
+        }
+    }
+
+    private var weightStep: Double {
+        switch weightUnit {
+        case .kilograms: 1
+        case .pounds: 1
+        }
+    }
+
+    private var weightBinding: Binding<Double> {
+        Binding(
+            get: { weightValue },
+            set: { weightValue = min(max($0, weightRange.lowerBound), weightRange.upperBound) }
+        )
+    }
+
+    private var weightKG: Double {
+        switch weightUnit {
+        case .kilograms:
+            weightValue
+        case .pounds:
+            HydrationGoalRecommender.kilograms(fromPounds: weightValue)
+        }
+    }
+
+    private var recommendedGoalML: Int {
+        HydrationGoalRecommender.dailyGoalML(weightKG: weightKG, gender: gender)
+    }
+
+    private var recommendationText: String {
+        HydrationAmountFormatter.amount(recommendedGoalML, unitSystem: state.settings.unitSystem)
+    }
+
+    private var weightText: String {
+        switch weightUnit {
+        case .kilograms:
+            "\(Int(weightValue.rounded())) kg"
+        case .pounds:
+            "\(Int(weightValue.rounded())) lb"
+        }
+    }
+
+    private func initializeDefaults() {
+        guard !hasInitialized else { return }
+        hasInitialized = true
+        gender = state.settings.profileGender ?? .preferNotToSay
+        weightUnit = state.settings.unitSystem == .imperial ? .pounds : .kilograms
+        let defaultWeightKG = state.settings.profileWeightKG ?? 70
+        switch weightUnit {
+        case .kilograms:
+            weightValue = defaultWeightKG
+        case .pounds:
+            weightValue = HydrationGoalRecommender.pounds(fromKilograms: defaultWeightKG)
+        }
+    }
+
+    private func convertWeight(from oldUnit: OnboardingWeightUnit, to newUnit: OnboardingWeightUnit) {
+        guard oldUnit != newUnit else { return }
+        switch (oldUnit, newUnit) {
+        case (.kilograms, .pounds):
+            weightValue = HydrationGoalRecommender.pounds(fromKilograms: weightValue)
+        case (.pounds, .kilograms):
+            weightValue = HydrationGoalRecommender.kilograms(fromPounds: weightValue)
+        case (.kilograms, .kilograms), (.pounds, .pounds):
+            break
+        }
+    }
+
+    private func completeOnboarding() async {
+        let safeWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
+        let goalML = HydrationGoalRecommender.dailyGoalML(weightKG: safeWeightKG, gender: gender)
+        await state.updateSettings {
+            $0.profileGender = gender
+            $0.profileWeightKG = safeWeightKG
+            $0.dailyGoalML = goalML
+            $0.hasCompletedOnboarding = true
+        }
     }
 }
 

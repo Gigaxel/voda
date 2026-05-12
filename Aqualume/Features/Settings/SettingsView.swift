@@ -57,6 +57,17 @@ struct SettingsView: View {
                 Section("About") {
                     LabeledContent("Aqualume", value: "Fill your day.")
                 }
+
+                if showsDevelopmentOnboardingControls {
+                    Section("Development") {
+                        Button("Replay Onboarding") {
+                            Task {
+                                await state.replayOnboardingForDevelopment()
+                                dismiss()
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -74,6 +85,14 @@ struct SettingsView: View {
         case .sharingDenied: "Denied"
         case .sharingAuthorized: "Enabled"
         }
+    }
+
+    private var showsDevelopmentOnboardingControls: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["AQUALUME_ENABLE_ONBOARDING_RESET"] == "1"
+        #else
+        false
+        #endif
     }
 
     private var goalBinding: Binding<Int> {

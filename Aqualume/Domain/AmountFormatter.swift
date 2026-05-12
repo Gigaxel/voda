@@ -16,7 +16,7 @@ public enum HydrationAmountFormatter {
         case .metric:
             if milliliters >= 1_000 {
                 let liters = Double(milliliters) / 1_000
-                return liters.formatted(.number.precision(.fractionLength(2))) + " L"
+                return String(format: "%.2f L", locale: Locale(identifier: "en_US_POSIX"), liters)
             }
             return "\(milliliters) ml"
         case .imperial:

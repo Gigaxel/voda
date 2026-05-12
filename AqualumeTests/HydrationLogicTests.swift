@@ -169,11 +169,28 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(summaries.map(\.progress), [1, 0.5])
     }
 
+    func testGoalRecommendationUsesWeightAndGender() {
+        XCTAssertEqual(
+            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .female),
+            2_150
+        )
+        XCTAssertEqual(
+            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .male),
+            2_450
+        )
+        XCTAssertEqual(
+            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .preferNotToSay),
+            2_300
+        )
+    }
+
     func testSettingsValidation() {
         XCTAssertEqual(HydrationValidation.validatedGoal(100), 250)
         XCTAssertEqual(HydrationValidation.validatedGoal(20_000), 10_000)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(1), 25)
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(4_000), 2_000)
+        XCTAssertEqual(HydrationValidation.validatedProfileWeightKG(10), 30)
+        XCTAssertEqual(HydrationValidation.validatedProfileWeightKG(400), 250)
     }
 
     @MainActor
@@ -249,6 +266,29 @@ final class HydrationLogicTests: XCTestCase {
         let summaries = state.summaries(days: 2)
         XCTAssertEqual(summaries.map(\.goalML), [1_500, 3_000])
         XCTAssertEqual(summaries.map(\.progress), [1, 0.5])
+    }
+
+    @MainActor
+    func testDevelopmentOnboardingReplayOnlyClearsCompletionFlag() async {
+        let settings = UserHydrationSettings(
+            dailyGoalML: 2_850,
+            profileGender: .male,
+            profileWeightKG: 82,
+            hasCompletedOnboarding: true
+        )
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository
+        )
+
+        await state.load()
+        await state.replayOnboardingForDevelopment()
+
+        XCTAssertFalse(state.settings.hasCompletedOnboarding)
+        XCTAssertEqual(state.settings.dailyGoalML, 2_850)
+        XCTAssertEqual(state.settings.profileGender, .male)
+        XCTAssertEqual(state.settings.profileWeightKG, 82)
     }
 
     private func date(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {

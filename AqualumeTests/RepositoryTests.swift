@@ -11,6 +11,9 @@ final class RepositoryTests: XCTestCase {
         var settings = UserHydrationSettings()
         settings.dailyGoalML = 2_500
         settings.unitSystem = .imperial
+        settings.profileGender = .male
+        settings.profileWeightKG = 82
+        settings.hasCompletedOnboarding = true
         settings.streakNotificationsEnabled = true
         try await repository.saveSettings(settings)
 
@@ -19,6 +22,9 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(logs, [log])
         XCTAssertEqual(loadedSettings.dailyGoalML, 2_500)
         XCTAssertEqual(loadedSettings.unitSystem, .imperial)
+        XCTAssertEqual(loadedSettings.profileGender, .male)
+        XCTAssertEqual(loadedSettings.profileWeightKG, 82)
+        XCTAssertTrue(loadedSettings.hasCompletedOnboarding)
         XCTAssertTrue(loadedSettings.streakNotificationsEnabled)
     }
 
@@ -49,6 +55,9 @@ final class RepositoryTests: XCTestCase {
         settings.dailyGoalML = 2_750
         settings.defaultAmountML = 330
         settings.glassDesign = .prism
+        settings.profileGender = .female
+        settings.profileWeightKG = 64
+        settings.hasCompletedOnboarding = true
         settings.streakNotificationsEnabled = true
 
         try await firstRepository.appendLog(log)
@@ -147,12 +156,21 @@ final class RepositoryTests: XCTestCase {
         let repository = SQLiteHydrationRepository(directory: directory)
         var settings = try await repository.loadSettings()
         XCTAssertFalse(settings.streakNotificationsEnabled)
+        XCTAssertNil(settings.profileGender)
+        XCTAssertNil(settings.profileWeightKG)
+        XCTAssertFalse(settings.hasCompletedOnboarding)
 
         settings.streakNotificationsEnabled = true
+        settings.profileGender = .nonBinary
+        settings.profileWeightKG = 72
+        settings.hasCompletedOnboarding = true
         try await repository.saveSettings(settings)
 
         let migratedSettings = try await repository.loadSettings()
         XCTAssertTrue(migratedSettings.streakNotificationsEnabled)
+        XCTAssertEqual(migratedSettings.profileGender, .nonBinary)
+        XCTAssertEqual(migratedSettings.profileWeightKG, 72)
+        XCTAssertTrue(migratedSettings.hasCompletedOnboarding)
     }
 
     func testSettingsDecodeDefaultsLegacyGlassDesignToTumbler() throws {
@@ -174,6 +192,7 @@ final class RepositoryTests: XCTestCase {
         let settings = try JSONDecoder().decode(UserHydrationSettings.self, from: data)
         XCTAssertEqual(settings.glassDesign, .tumbler)
         XCTAssertFalse(settings.streakNotificationsEnabled)
+        XCTAssertFalse(settings.hasCompletedOnboarding)
     }
 
     private func executeSQLite(_ sql: String, database: OpaquePointer?) throws {
