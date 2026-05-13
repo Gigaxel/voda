@@ -195,54 +195,57 @@ private struct OnboardingView: View {
             ZStack {
                 AqualumeBackground()
 
-                Form {
-                    Section {
-                        Text("A good first goal starts with a quick body-weight estimate.")
-                            .foregroundStyle(.secondary)
-                    }
-                    .listRowBackground(Color.clear)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("A good first goal starts with a quick body-weight estimate.")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 20)
+                        .padding(.trailing, 12)
 
-                    Section("Profile") {
-                        Picker("Gender", selection: $gender) {
-                            ForEach(HydrationProfileGender.allCases, id: \.self) { option in
-                                Text(option.displayName).tag(option)
+                    Form {
+                        Section("Profile") {
+                            Picker("Gender", selection: $gender) {
+                                ForEach(HydrationProfileGender.allCases, id: \.self) { option in
+                                    Text(option.displayName).tag(option)
+                                }
                             }
-                        }
 
-                        Picker("Weight unit", selection: $weightUnit) {
-                            ForEach(OnboardingWeightUnit.allCases) { unit in
-                                Text(unit.title).tag(unit)
+                            Picker("Weight unit", selection: $weightUnit) {
+                                ForEach(OnboardingWeightUnit.allCases) { unit in
+                                    Text(unit.title).tag(unit)
+                                }
                             }
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: weightUnit) { oldValue, newValue in
-                            convertWeight(from: oldValue, to: newValue)
-                        }
-
-                        LabeledContent("Weight") {
-                            HStack(spacing: 8) {
-                                TextField("Weight", value: weightBinding, format: .number.precision(.fractionLength(0)))
-                                    .keyboardType(.decimalPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(minWidth: 72)
-                                Text(weightUnit.title)
-                                    .foregroundStyle(.secondary)
+                            .pickerStyle(.segmented)
+                            .onChange(of: weightUnit) { oldValue, newValue in
+                                convertWeight(from: oldValue, to: newValue)
                             }
+
+                            LabeledContent("Weight") {
+                                HStack(spacing: 8) {
+                                    TextField("Weight", value: weightBinding, format: .number.precision(.fractionLength(0)))
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(minWidth: 72)
+                                    Text(weightUnit.title)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Slider(value: weightBinding, in: weightRange, step: weightStep)
+                                .accessibilityLabel("Weight")
+                                .accessibilityValue(weightText)
                         }
 
-                        Slider(value: weightBinding, in: weightRange, step: weightStep)
-                            .accessibilityLabel("Weight")
-                            .accessibilityValue(weightText)
+                        Section("Recommended Daily Goal") {
+                            LabeledContent("Starting goal", value: recommendationText)
+                            Text("You can tune the daily goal later in Settings.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-
-                    Section("Recommended Daily Goal") {
-                        LabeledContent("Starting goal", value: recommendationText)
-                        Text("You can tune the daily goal later in Settings.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    .scrollContentBackground(.hidden)
                 }
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Set Your Goal")
             .safeAreaInset(edge: .bottom) {
