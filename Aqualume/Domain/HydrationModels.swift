@@ -212,6 +212,22 @@ public enum HydrationValidation {
     }
 }
 
+public enum HydrationReminderDefaults {
+    public static let streakReminderHour = 18
+    public static let hydrationReminderMessages = [
+        "Your brain likes water too. A quick sip can help focus.",
+        "Water helps your body keep its cool.",
+        "A little hydration can steady your energy.",
+        "Your joints appreciate a bit of fluid support.",
+        "Water helps move nutrients where they need to go.",
+        "A quick sip can help keep digestion moving.",
+        "Your skin needs water like the rest of you.",
+        "Breathing, sweat, movement: time to top up.",
+        "A sip now makes today's goal easier to reach.",
+        "Your kidneys do quiet work. Water helps them."
+    ]
+}
+
 public enum HydrationGoalRecommender {
     private static let poundsPerKilogram = 2.2046226218
 

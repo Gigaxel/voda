@@ -104,6 +104,7 @@ public final class HydrationAppState: ObservableObject {
             try await saveCurrentGoalSnapshotIfNeeded()
             healthKitState = await healthKit.authorizationState()
             await sync.activate()
+            await refreshHydrationReminders()
             await refreshStreakReminder()
             hasLoaded = true
         } catch {
@@ -140,6 +141,9 @@ public final class HydrationAppState: ObservableObject {
             if !hadReachedGoal && hasReachedGoal {
                 await notifyStreakGoalReachedIfNeeded()
             }
+            if hadReachedGoal != hasReachedGoal {
+                await refreshHydrationReminders()
+            }
             await refreshStreakReminder()
             reloadWidgets()
         } catch {
@@ -150,6 +154,7 @@ public final class HydrationAppState: ObservableObject {
     public func undoLatest() async {
         refreshForCurrentDate()
         guard let latest = calculator.latestLog(on: now(), logs: logs) else { return }
+        let hadReachedGoal = hasReachedGoal
         do {
             try await hydrationRepository.removeLog(id: latest.id)
             if let identifier = latest.healthKitSampleIdentifier {
@@ -157,6 +162,9 @@ public final class HydrationAppState: ObservableObject {
             }
             logs = try await hydrationRepository.loadLogs()
             latestAddedAmountML = nil
+            if hadReachedGoal != hasReachedGoal {
+                await refreshHydrationReminders()
+            }
             await refreshStreakReminder()
             reloadWidgets()
         } catch {
@@ -177,11 +185,7 @@ public final class HydrationAppState: ObservableObject {
             try await settingsRepository.saveSettings(next)
             settings = try await settingsRepository.loadSettings()
             try await saveCurrentGoalSnapshotIfNeeded()
-            if settings.remindersEnabled {
-                try await reminders.scheduleReminders(settings: settings)
-            } else {
-                await reminders.cancelReminders()
-            }
+            await refreshHydrationReminders()
             await refreshStreakReminder()
             await sync.sendSettings(settings)
             reloadWidgets()
@@ -225,6 +229,18 @@ public final class HydrationAppState: ObservableObject {
         guard dailyGoalSnapshots[dateKey] != goalML else { return }
         try await dailyGoalRepository?.saveDailyGoalSnapshot(dateKey: dateKey, goalML: goalML)
         dailyGoalSnapshots[dateKey] = goalML
+    }
+
+    private func refreshHydrationReminders() async {
+        do {
+            if settings.remindersEnabled {
+                try await reminders.scheduleReminders(settings: settings, includingToday: !hasReachedGoal)
+            } else {
+                await reminders.cancelReminders()
+            }
+        } catch {
+            statusMessage = "Unable to update reminders."
+        }
     }
 
     private func refreshStreakReminder() async {

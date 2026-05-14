@@ -39,6 +39,7 @@ struct SettingsView: View {
                 Section("Streak") {
                     LabeledContent("Current", value: "\(state.streakStatus.currentDays)d")
                     LabeledContent("Best", value: "\(state.streakStatus.bestDays)d")
+                    LabeledContent("Reminder", value: "18:00")
                     Toggle("Streak notifications", isOn: streakNotificationBinding)
                 }
 

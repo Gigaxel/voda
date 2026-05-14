@@ -4,12 +4,21 @@ import UserNotifications
 
 public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendable {
     private let center: UNUserNotificationCenter
+    private let calendar: Calendar
+    private let now: @Sendable () -> Date
     private let reminderPrefix = "aqualume.reminder."
     private let streakReminderPrefix = "aqualume.streak.reminder."
     private let streakMilestonePrefix = "aqualume.streak.milestone."
+    private let maxScheduledReminderRequests = 60
 
-    public init(center: UNUserNotificationCenter = .current()) {
+    public init(
+        center: UNUserNotificationCenter = .current(),
+        calendar: Calendar = .current,
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
         self.center = center
+        self.calendar = calendar
+        self.now = now
     }
 
     public func authorizationStatus() async -> Bool {
@@ -22,6 +31,10 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
     }
 
     public func scheduleReminders(settings: UserHydrationSettings) async throws {
+        try await scheduleReminders(settings: settings, includingToday: true)
+    }
+
+    public func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws {
         await cancelReminders()
         guard settings.remindersEnabled else { return }
 
@@ -31,24 +44,37 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         let start = max(0, min(settings.reminderSchedule.startHour, 23))
         let end = max(start, min(settings.reminderSchedule.endHour, 23))
         let intervalHours = max(1, settings.reminderSchedule.intervalMinutes / 60)
+        let reminderHours = Array(stride(from: start, through: end, by: intervalHours))
+        guard !reminderHours.isEmpty else { return }
 
-        for hour in stride(from: start, through: end, by: intervalHours) {
-            var components = DateComponents()
-            components.hour = hour
-            components.minute = 0
+        let scheduledDays = max(1, min(7, maxScheduledReminderRequests / reminderHours.count))
+        let todayOffset = includingToday ? 0 : 1
+        let referenceDate = now()
 
-            let content = UNMutableNotificationContent()
-            content.title = "Aqualume"
-            content.body = "A little more light in the glass."
-            content.sound = .default
+        for dayOffset in todayOffset..<(todayOffset + scheduledDays) {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: referenceDate) else { continue }
 
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            let request = UNNotificationRequest(
-                identifier: "\(reminderPrefix)\(hour)",
-                content: content,
-                trigger: trigger
-            )
-            try await center.add(request)
+            for hour in reminderHours {
+                var components = calendar.dateComponents([.year, .month, .day], from: day)
+                components.hour = hour
+                components.minute = 0
+
+                guard let reminderDate = calendar.date(from: components), reminderDate > referenceDate else { continue }
+
+                let content = UNMutableNotificationContent()
+                content.title = "Aqualume"
+                content.body = hydrationReminderMessage()
+                content.sound = .default
+
+                let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: reminderDate)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+                let request = UNNotificationRequest(
+                    identifier: "\(reminderPrefix)\(calendarIdentifier(for: reminderDate)).\(hour)",
+                    content: content,
+                    trigger: trigger
+                )
+                try await center.add(request)
+            }
         }
     }
 
@@ -70,7 +96,7 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         guard granted else { return }
 
         let calendar = Calendar.current
-        let reminderHour = max(0, min(settings.reminderSchedule.endHour, 23))
+        let reminderHour = HydrationReminderDefaults.streakReminderHour
         var components = calendar.dateComponents([.year, .month, .day], from: date)
         components.hour = reminderHour
         components.minute = 0
@@ -127,6 +153,19 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         let pending = await center.pendingNotificationRequests()
         let identifiers = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    private func calendarIdentifier(for date: Date) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        return String(format: "%04d%02d%02d", year, month, day)
+    }
+
+    private func hydrationReminderMessage() -> String {
+        HydrationReminderDefaults.hydrationReminderMessages.randomElement()
+            ?? "Sip a glass bro"
     }
 }
 #endif

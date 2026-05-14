@@ -10,14 +10,23 @@ private final class TestClock: @unchecked Sendable {
 }
 
 private final class RecordingReminderScheduler: ReminderScheduling, @unchecked Sendable {
+    var scheduledReminderIncludesToday: [Bool] = []
     var scheduledStreakStatuses: [HydrationStreakStatus] = []
     var notifiedStreakStatuses: [HydrationStreakStatus] = []
+    var cancelledReminders = 0
     var cancelledStreakNotifications = 0
 
     func authorizationStatus() async -> Bool { true }
     func requestAuthorization() async throws -> Bool { true }
-    func scheduleReminders(settings: UserHydrationSettings) async throws {}
-    func cancelReminders() async {}
+    func scheduleReminders(settings: UserHydrationSettings) async throws {
+        try await scheduleReminders(settings: settings, includingToday: true)
+    }
+    func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws {
+        scheduledReminderIncludesToday.append(includingToday)
+    }
+    func cancelReminders() async {
+        cancelledReminders += 1
+    }
 
     func scheduleStreakReminder(
         settings: UserHydrationSettings,
@@ -193,6 +202,18 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(HydrationValidation.validatedProfileWeightKG(400), 250)
     }
 
+    func testStreakReminderDefaultsToSixPM() {
+        XCTAssertEqual(HydrationReminderDefaults.streakReminderHour, 18)
+    }
+
+    func testHydrationReminderMessagePoolUsesTenShortFacts() {
+        let messages = HydrationReminderDefaults.hydrationReminderMessages
+
+        XCTAssertEqual(messages.count, 10)
+        XCTAssertEqual(Set(messages).count, 10)
+        XCTAssertTrue(messages.allSatisfy { !$0.isEmpty && $0.count <= 70 })
+    }
+
     @MainActor
     func testStreakNotificationIsSentOnceWhenGoalIsReached() async throws {
         let calendar = Calendar(identifier: .gregorian)
@@ -217,6 +238,56 @@ final class HydrationLogicTests: XCTestCase {
         await state.log(amountML: 100)
 
         XCTAssertEqual(reminders.notifiedStreakStatuses.map(\.currentDays), [1])
+    }
+
+    @MainActor
+    func testHydrationRemindersSkipRestOfTodayAfterGoalIsReached() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let settings = UserHydrationSettings(
+            dailyGoalML: 500,
+            remindersEnabled: true
+        )
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let reminders = RecordingReminderScheduler()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            reminders: reminders,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        await state.log(amountML: 250)
+        await state.log(amountML: 250)
+
+        XCTAssertEqual(reminders.scheduledReminderIncludesToday, [true, false])
+    }
+
+    @MainActor
+    func testHydrationRemindersResumeTodayAfterUndoDropsBelowGoal() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let settings = UserHydrationSettings(
+            dailyGoalML: 500,
+            remindersEnabled: true
+        )
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let reminders = RecordingReminderScheduler()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            reminders: reminders,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        await state.log(amountML: 500)
+        await state.undoLatest()
+
+        XCTAssertEqual(reminders.scheduledReminderIncludesToday, [true, false, true])
     }
 
     @MainActor
