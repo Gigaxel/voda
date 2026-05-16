@@ -1,7 +1,4 @@
 import SwiftUI
-#if os(iOS)
-import UIKit
-#endif
 
 struct AqualumeRootView: View {
     @EnvironmentObject private var state: HydrationAppState
@@ -99,9 +96,6 @@ struct AqualumeRootView: View {
                     .environmentObject(state)
                     .interactiveDismissDisabled()
             }
-            .task(id: hydrationAppIconTaskID) {
-                await AqualumeAlternateAppIcon.apply(name: hydrationAppIconName)
-            }
             .task(id: state.currentDateKey) {
                 await refreshAfterNextDayStarts()
             }
@@ -147,15 +141,6 @@ struct AqualumeRootView: View {
             guard celebrationID == newID else { return }
             celebrationActive = false
         }
-    }
-
-    private var hydrationAppIconName: String? {
-        guard !state.hasReachedGoal else { return nil }
-        return state.progress >= 0.5 ? "AppIconMid" : "AppIconEmpty"
-    }
-
-    private var hydrationAppIconTaskID: String {
-        "\(state.currentDateKey)-\(hydrationAppIconName ?? "full")"
     }
 
     private func refreshAfterNextDayStarts() async {
@@ -359,27 +344,6 @@ private struct OnboardingView: View {
         }
     }
 }
-
-#if os(iOS)
-@MainActor
-private enum AqualumeAlternateAppIcon {
-    static func apply(name: String?) async {
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
-        guard UIApplication.shared.supportsAlternateIcons else { return }
-        guard UIApplication.shared.alternateIconName != name else { return }
-
-        await withCheckedContinuation { continuation in
-            UIApplication.shared.setAlternateIconName(name) { _ in
-                continuation.resume()
-            }
-        }
-    }
-}
-#else
-private enum AqualumeAlternateAppIcon {
-    static func apply(name: String?) async {}
-}
-#endif
 
 struct AqualumeBackground: View {
     @Environment(\.colorScheme) private var colorScheme

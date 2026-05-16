@@ -68,13 +68,48 @@ public struct HydrationLog: Identifiable, Codable, Equatable, Sendable {
 
 public struct ReminderSchedule: Codable, Equatable, Sendable {
     public var startHour: Int
+    public var startMinute: Int
     public var endHour: Int
+    public var endMinute: Int
     public var intervalMinutes: Int
 
-    public init(startHour: Int = 9, endHour: Int = 21, intervalMinutes: Int = 120) {
+    public var startMinutesAfterMidnight: Int {
+        startHour * 60 + startMinute
+    }
+
+    public var endMinutesAfterMidnight: Int {
+        endHour * 60 + endMinute
+    }
+
+    public init(
+        startHour: Int = 9,
+        startMinute: Int = 0,
+        endHour: Int = 21,
+        endMinute: Int = 0,
+        intervalMinutes: Int = 120
+    ) {
         self.startHour = startHour
+        self.startMinute = startMinute
         self.endHour = endHour
+        self.endMinute = endMinute
         self.intervalMinutes = intervalMinutes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case startHour
+        case startMinute
+        case endHour
+        case endMinute
+        case intervalMinutes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startHour = try container.decodeIfPresent(Int.self, forKey: .startHour) ?? 9
+        startMinute = try container.decodeIfPresent(Int.self, forKey: .startMinute) ?? 0
+        endHour = try container.decodeIfPresent(Int.self, forKey: .endHour) ?? 21
+        endMinute = try container.decodeIfPresent(Int.self, forKey: .endMinute) ?? 0
+        intervalMinutes = try container.decodeIfPresent(Int.self, forKey: .intervalMinutes) ?? 120
     }
 }
 
@@ -89,6 +124,8 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
     public var remindersEnabled: Bool
     public var reminderSchedule: ReminderSchedule
     public var streakNotificationsEnabled: Bool
+    public var streakReminderHour: Int
+    public var streakReminderMinute: Int
     public var healthKitEnabled: Bool
 
     public init(
@@ -102,6 +139,8 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         remindersEnabled: Bool = false,
         reminderSchedule: ReminderSchedule = ReminderSchedule(),
         streakNotificationsEnabled: Bool = false,
+        streakReminderHour: Int = HydrationReminderDefaults.streakReminderHour,
+        streakReminderMinute: Int = HydrationReminderDefaults.streakReminderMinute,
         healthKitEnabled: Bool = false
     ) {
         self.dailyGoalML = dailyGoalML
@@ -114,6 +153,8 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.remindersEnabled = remindersEnabled
         self.reminderSchedule = reminderSchedule
         self.streakNotificationsEnabled = streakNotificationsEnabled
+        self.streakReminderHour = streakReminderHour
+        self.streakReminderMinute = streakReminderMinute
         self.healthKitEnabled = healthKitEnabled
     }
 
@@ -128,6 +169,8 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         case remindersEnabled
         case reminderSchedule
         case streakNotificationsEnabled
+        case streakReminderHour
+        case streakReminderMinute
         case healthKitEnabled
     }
 
@@ -143,6 +186,10 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         remindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? false
         reminderSchedule = try container.decodeIfPresent(ReminderSchedule.self, forKey: .reminderSchedule) ?? ReminderSchedule()
         streakNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .streakNotificationsEnabled) ?? false
+        streakReminderHour = try container.decodeIfPresent(Int.self, forKey: .streakReminderHour)
+            ?? HydrationReminderDefaults.streakReminderHour
+        streakReminderMinute = try container.decodeIfPresent(Int.self, forKey: .streakReminderMinute)
+            ?? HydrationReminderDefaults.streakReminderMinute
         healthKitEnabled = try container.decodeIfPresent(Bool.self, forKey: .healthKitEnabled) ?? false
     }
 }
@@ -198,6 +245,16 @@ public enum HydrationValidation {
     public static let maximumDefaultAmountML = 2_000
     public static let minimumProfileWeightKG = 30.0
     public static let maximumProfileWeightKG = 250.0
+    public static let minimumReminderIntervalMinutes = 60
+    public static let maximumReminderIntervalMinutes = 240
+
+    public static func validatedHour(_ value: Int) -> Int {
+        min(max(value, 0), 23)
+    }
+
+    public static func validatedMinute(_ value: Int) -> Int {
+        min(max(value, 0), 59)
+    }
 
     public static func validatedGoal(_ value: Int) -> Int {
         min(max(value, minimumGoalML), maximumGoalML)
@@ -210,10 +267,25 @@ public enum HydrationValidation {
     public static func validatedProfileWeightKG(_ value: Double) -> Double {
         min(max(value, minimumProfileWeightKG), maximumProfileWeightKG)
     }
+
+    public static func validatedReminderIntervalMinutes(_ value: Int) -> Int {
+        min(max(value, minimumReminderIntervalMinutes), maximumReminderIntervalMinutes)
+    }
+
+    public static func validatedReminderSchedule(_ schedule: ReminderSchedule) -> ReminderSchedule {
+        ReminderSchedule(
+            startHour: validatedHour(schedule.startHour),
+            startMinute: validatedMinute(schedule.startMinute),
+            endHour: validatedHour(schedule.endHour),
+            endMinute: validatedMinute(schedule.endMinute),
+            intervalMinutes: validatedReminderIntervalMinutes(schedule.intervalMinutes)
+        )
+    }
 }
 
 public enum HydrationReminderDefaults {
     public static let streakReminderHour = 18
+    public static let streakReminderMinute = 0
     public static let hydrationReminderMessages = [
         "Your brain likes water too. A quick sip can help focus.",
         "Water helps your body keep its cool.",

@@ -41,23 +41,25 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         let granted = try await requestAuthorization()
         guard granted else { return }
 
-        let start = max(0, min(settings.reminderSchedule.startHour, 23))
-        let end = max(start, min(settings.reminderSchedule.endHour, 23))
-        let intervalHours = max(1, settings.reminderSchedule.intervalMinutes / 60)
-        let reminderHours = Array(stride(from: start, through: end, by: intervalHours))
-        guard !reminderHours.isEmpty else { return }
+        let reminderTimes = Self.reminderTimes(for: settings.reminderSchedule)
+        guard !reminderTimes.isEmpty else { return }
 
-        let scheduledDays = max(1, min(7, maxScheduledReminderRequests / reminderHours.count))
+        let scheduledDays = max(1, min(7, maxScheduledReminderRequests / reminderTimes.count))
         let todayOffset = includingToday ? 0 : 1
         let referenceDate = now()
+        var scheduledRequestCount = 0
 
         for dayOffset in todayOffset..<(todayOffset + scheduledDays) {
+            guard scheduledRequestCount < maxScheduledReminderRequests else { break }
             guard let day = calendar.date(byAdding: .day, value: dayOffset, to: referenceDate) else { continue }
 
-            for hour in reminderHours {
+            for reminderTime in reminderTimes {
+                guard scheduledRequestCount < maxScheduledReminderRequests else { break }
                 var components = calendar.dateComponents([.year, .month, .day], from: day)
+                let hour = reminderTime / 60
+                let minute = reminderTime % 60
                 components.hour = hour
-                components.minute = 0
+                components.minute = minute
 
                 guard let reminderDate = calendar.date(from: components), reminderDate > referenceDate else { continue }
 
@@ -69,13 +71,26 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
                 let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: reminderDate)
                 let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
                 let request = UNNotificationRequest(
-                    identifier: "\(reminderPrefix)\(calendarIdentifier(for: reminderDate)).\(hour)",
+                    identifier: "\(reminderPrefix)\(calendarIdentifier(for: reminderDate)).\(reminderTime)",
                     content: content,
                     trigger: trigger
                 )
                 try await center.add(request)
+                scheduledRequestCount += 1
             }
         }
+    }
+
+    static func reminderTimes(for schedule: ReminderSchedule) -> [Int] {
+        let schedule = HydrationValidation.validatedReminderSchedule(schedule)
+        let intervalMinutes = HydrationValidation.validatedReminderIntervalMinutes(schedule.intervalMinutes)
+        let start = schedule.startMinutesAfterMidnight
+        let end = schedule.endMinutesAfterMidnight
+        let endBoundary = end >= start ? end : end + 24 * 60
+
+        return stride(from: start, through: endBoundary, by: intervalMinutes)
+            .map { $0 % (24 * 60) }
+            .sorted()
     }
 
     public func cancelReminders() async {
@@ -95,11 +110,12 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         let granted = try await requestAuthorization()
         guard granted else { return }
 
-        let calendar = Calendar.current
-        let reminderHour = HydrationReminderDefaults.streakReminderHour
+        let calendar = self.calendar
+        let reminderHour = HydrationValidation.validatedHour(settings.streakReminderHour)
+        let reminderMinute = HydrationValidation.validatedMinute(settings.streakReminderMinute)
         var components = calendar.dateComponents([.year, .month, .day], from: date)
         components.hour = reminderHour
-        components.minute = 0
+        components.minute = reminderMinute
 
         guard let reminderDate = calendar.date(from: components), reminderDate > date else { return }
 

@@ -76,6 +76,9 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
         var normalized = settings
         normalized.dailyGoalML = HydrationValidation.validatedGoal(settings.dailyGoalML)
         normalized.defaultAmountML = HydrationValidation.validatedDefaultAmount(settings.defaultAmountML)
+        normalized.reminderSchedule = HydrationValidation.validatedReminderSchedule(settings.reminderSchedule)
+        normalized.streakReminderHour = HydrationValidation.validatedHour(settings.streakReminderHour)
+        normalized.streakReminderMinute = HydrationValidation.validatedMinute(settings.streakReminderMinute)
         if let weightKG = settings.profileWeightKG {
             normalized.profileWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
         }
@@ -341,9 +344,13 @@ private enum SQLiteHydrationStore {
                 has_completed_onboarding INTEGER NOT NULL DEFAULT 0,
                 reminders_enabled INTEGER NOT NULL,
                 reminder_start_hour INTEGER NOT NULL,
+                reminder_start_minute INTEGER NOT NULL DEFAULT 0,
                 reminder_end_hour INTEGER NOT NULL,
+                reminder_end_minute INTEGER NOT NULL DEFAULT 0,
                 reminder_interval_minutes INTEGER NOT NULL,
                 streak_notifications_enabled INTEGER NOT NULL DEFAULT 0,
+                streak_reminder_hour INTEGER NOT NULL DEFAULT 18,
+                streak_reminder_minute INTEGER NOT NULL DEFAULT 0,
                 healthkit_enabled INTEGER NOT NULL
             );
             """
@@ -372,7 +379,19 @@ private enum SQLiteHydrationStore {
                 "ALTER TABLE settings ADD COLUMN has_completed_onboarding INTEGER NOT NULL DEFAULT 0;"
             )
         }
-        try database.execute("PRAGMA user_version = 4;")
+        if try !settingsTableHasColumn("reminder_start_minute", in: database) {
+            try database.execute("ALTER TABLE settings ADD COLUMN reminder_start_minute INTEGER NOT NULL DEFAULT 0;")
+        }
+        if try !settingsTableHasColumn("reminder_end_minute", in: database) {
+            try database.execute("ALTER TABLE settings ADD COLUMN reminder_end_minute INTEGER NOT NULL DEFAULT 0;")
+        }
+        if try !settingsTableHasColumn("streak_reminder_hour", in: database) {
+            try database.execute("ALTER TABLE settings ADD COLUMN streak_reminder_hour INTEGER NOT NULL DEFAULT 18;")
+        }
+        if try !settingsTableHasColumn("streak_reminder_minute", in: database) {
+            try database.execute("ALTER TABLE settings ADD COLUMN streak_reminder_minute INTEGER NOT NULL DEFAULT 0;")
+        }
+        try database.execute("PRAGMA user_version = 5;")
     }
 
     static func loadLogs(from database: SQLiteDatabase) throws -> [HydrationLog] {
@@ -447,9 +466,13 @@ private enum SQLiteHydrationStore {
                has_completed_onboarding,
                reminders_enabled,
                reminder_start_hour,
+               reminder_start_minute,
                reminder_end_hour,
+               reminder_end_minute,
                reminder_interval_minutes,
                streak_notifications_enabled,
+               streak_reminder_hour,
+               streak_reminder_minute,
                healthkit_enabled
         FROM settings
         WHERE id = 1;
@@ -476,8 +499,10 @@ private enum SQLiteHydrationStore {
             : sqlite3_column_double(statement, 5)
         let reminderSchedule = ReminderSchedule(
             startHour: Int(sqlite3_column_int64(statement, 8)),
-            endHour: Int(sqlite3_column_int64(statement, 9)),
-            intervalMinutes: Int(sqlite3_column_int64(statement, 10))
+            startMinute: Int(sqlite3_column_int64(statement, 9)),
+            endHour: Int(sqlite3_column_int64(statement, 10)),
+            endMinute: Int(sqlite3_column_int64(statement, 11)),
+            intervalMinutes: Int(sqlite3_column_int64(statement, 12))
         )
 
         return UserHydrationSettings(
@@ -490,8 +515,10 @@ private enum SQLiteHydrationStore {
             hasCompletedOnboarding: sqlite3_column_int64(statement, 6) == 1,
             remindersEnabled: sqlite3_column_int64(statement, 7) == 1,
             reminderSchedule: reminderSchedule,
-            streakNotificationsEnabled: sqlite3_column_int64(statement, 11) == 1,
-            healthKitEnabled: sqlite3_column_int64(statement, 12) == 1
+            streakNotificationsEnabled: sqlite3_column_int64(statement, 13) == 1,
+            streakReminderHour: Int(sqlite3_column_int64(statement, 14)),
+            streakReminderMinute: Int(sqlite3_column_int64(statement, 15)),
+            healthKitEnabled: sqlite3_column_int64(statement, 16) == 1
         )
     }
 
@@ -508,12 +535,16 @@ private enum SQLiteHydrationStore {
             has_completed_onboarding,
             reminders_enabled,
             reminder_start_hour,
+            reminder_start_minute,
             reminder_end_hour,
+            reminder_end_minute,
             reminder_interval_minutes,
             streak_notifications_enabled,
+            streak_reminder_hour,
+            streak_reminder_minute,
             healthkit_enabled
         )
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             daily_goal_ml = excluded.daily_goal_ml,
             default_amount_ml = excluded.default_amount_ml,
@@ -524,9 +555,13 @@ private enum SQLiteHydrationStore {
             has_completed_onboarding = excluded.has_completed_onboarding,
             reminders_enabled = excluded.reminders_enabled,
             reminder_start_hour = excluded.reminder_start_hour,
+            reminder_start_minute = excluded.reminder_start_minute,
             reminder_end_hour = excluded.reminder_end_hour,
+            reminder_end_minute = excluded.reminder_end_minute,
             reminder_interval_minutes = excluded.reminder_interval_minutes,
             streak_notifications_enabled = excluded.streak_notifications_enabled,
+            streak_reminder_hour = excluded.streak_reminder_hour,
+            streak_reminder_minute = excluded.streak_reminder_minute,
             healthkit_enabled = excluded.healthkit_enabled;
         """
         let statement = try database.prepare(sql)
@@ -541,10 +576,14 @@ private enum SQLiteHydrationStore {
         try database.bind(settings.hasCompletedOnboarding, at: 7, in: statement)
         try database.bind(settings.remindersEnabled, at: 8, in: statement)
         try database.bind(settings.reminderSchedule.startHour, at: 9, in: statement)
-        try database.bind(settings.reminderSchedule.endHour, at: 10, in: statement)
-        try database.bind(settings.reminderSchedule.intervalMinutes, at: 11, in: statement)
-        try database.bind(settings.streakNotificationsEnabled, at: 12, in: statement)
-        try database.bind(settings.healthKitEnabled, at: 13, in: statement)
+        try database.bind(settings.reminderSchedule.startMinute, at: 10, in: statement)
+        try database.bind(settings.reminderSchedule.endHour, at: 11, in: statement)
+        try database.bind(settings.reminderSchedule.endMinute, at: 12, in: statement)
+        try database.bind(settings.reminderSchedule.intervalMinutes, at: 13, in: statement)
+        try database.bind(settings.streakNotificationsEnabled, at: 14, in: statement)
+        try database.bind(settings.streakReminderHour, at: 15, in: statement)
+        try database.bind(settings.streakReminderMinute, at: 16, in: statement)
+        try database.bind(settings.healthKitEnabled, at: 17, in: statement)
         try database.stepDone(statement, sql: sql)
     }
 

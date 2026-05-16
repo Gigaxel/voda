@@ -200,10 +200,54 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(HydrationValidation.validatedDefaultAmount(4_000), 2_000)
         XCTAssertEqual(HydrationValidation.validatedProfileWeightKG(10), 30)
         XCTAssertEqual(HydrationValidation.validatedProfileWeightKG(400), 250)
+        XCTAssertEqual(HydrationValidation.validatedReminderIntervalMinutes(1), 60)
+        XCTAssertEqual(HydrationValidation.validatedReminderIntervalMinutes(500), 240)
+    }
+
+    func testReminderScheduleValidationPreservesSeparateStartAndEndEdits() {
+        let schedule = ReminderSchedule(
+            startHour: 9,
+            startMinute: 0,
+            endHour: 8,
+            endMinute: 30,
+            intervalMinutes: 120
+        )
+
+        let validated = HydrationValidation.validatedReminderSchedule(schedule)
+
+        XCTAssertEqual(validated.startHour, 9)
+        XCTAssertEqual(validated.startMinute, 0)
+        XCTAssertEqual(validated.endHour, 8)
+        XCTAssertEqual(validated.endMinute, 30)
+    }
+
+    func testReminderTimesSupportOvernightWindows() {
+        let schedule = ReminderSchedule(
+            startHour: 21,
+            startMinute: 0,
+            endHour: 8,
+            endMinute: 0,
+            intervalMinutes: 120
+        )
+
+        XCTAssertEqual(LocalReminderScheduler.reminderTimes(for: schedule), [60, 180, 300, 420, 1260, 1380])
+    }
+
+    func testReminderTimesClampPersistedInvalidIntervals() {
+        let schedule = ReminderSchedule(
+            startHour: 0,
+            startMinute: 0,
+            endHour: 23,
+            endMinute: 59,
+            intervalMinutes: 1
+        )
+
+        XCTAssertEqual(LocalReminderScheduler.reminderTimes(for: schedule).count, 24)
     }
 
     func testStreakReminderDefaultsToSixPM() {
         XCTAssertEqual(HydrationReminderDefaults.streakReminderHour, 18)
+        XCTAssertEqual(HydrationReminderDefaults.streakReminderMinute, 0)
     }
 
     func testHydrationReminderMessagePoolUsesTenShortFacts() {

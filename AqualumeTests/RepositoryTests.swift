@@ -14,7 +14,10 @@ final class RepositoryTests: XCTestCase {
         settings.profileGender = .male
         settings.profileWeightKG = 82
         settings.hasCompletedOnboarding = true
+        settings.reminderSchedule = ReminderSchedule(startHour: 8, startMinute: 30, endHour: 20, endMinute: 45)
         settings.streakNotificationsEnabled = true
+        settings.streakReminderHour = 19
+        settings.streakReminderMinute = 15
         try await repository.saveSettings(settings)
 
         let logs = try await repository.loadLogs()
@@ -25,7 +28,11 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(loadedSettings.profileGender, .male)
         XCTAssertEqual(loadedSettings.profileWeightKG, 82)
         XCTAssertTrue(loadedSettings.hasCompletedOnboarding)
+        XCTAssertEqual(loadedSettings.reminderSchedule.startMinute, 30)
+        XCTAssertEqual(loadedSettings.reminderSchedule.endMinute, 45)
         XCTAssertTrue(loadedSettings.streakNotificationsEnabled)
+        XCTAssertEqual(loadedSettings.streakReminderHour, 19)
+        XCTAssertEqual(loadedSettings.streakReminderMinute, 15)
     }
 
     func testSQLiteRepositoryAvoidsDuplicateLogIDs() async throws {
@@ -58,7 +65,10 @@ final class RepositoryTests: XCTestCase {
         settings.profileGender = .female
         settings.profileWeightKG = 64
         settings.hasCompletedOnboarding = true
+        settings.reminderSchedule = ReminderSchedule(startHour: 7, startMinute: 10, endHour: 22, endMinute: 35)
         settings.streakNotificationsEnabled = true
+        settings.streakReminderHour = 20
+        settings.streakReminderMinute = 5
 
         try await firstRepository.appendLog(log)
         try await firstRepository.saveSettings(settings)
@@ -156,11 +166,19 @@ final class RepositoryTests: XCTestCase {
         let repository = SQLiteHydrationRepository(directory: directory)
         var settings = try await repository.loadSettings()
         XCTAssertFalse(settings.streakNotificationsEnabled)
+        XCTAssertEqual(settings.reminderSchedule.startMinute, 0)
+        XCTAssertEqual(settings.reminderSchedule.endMinute, 0)
+        XCTAssertEqual(settings.streakReminderHour, 18)
+        XCTAssertEqual(settings.streakReminderMinute, 0)
         XCTAssertNil(settings.profileGender)
         XCTAssertNil(settings.profileWeightKG)
         XCTAssertFalse(settings.hasCompletedOnboarding)
 
         settings.streakNotificationsEnabled = true
+        settings.reminderSchedule.startMinute = 45
+        settings.reminderSchedule.endMinute = 15
+        settings.streakReminderHour = 17
+        settings.streakReminderMinute = 30
         settings.profileGender = .nonBinary
         settings.profileWeightKG = 72
         settings.hasCompletedOnboarding = true
@@ -168,6 +186,10 @@ final class RepositoryTests: XCTestCase {
 
         let migratedSettings = try await repository.loadSettings()
         XCTAssertTrue(migratedSettings.streakNotificationsEnabled)
+        XCTAssertEqual(migratedSettings.reminderSchedule.startMinute, 45)
+        XCTAssertEqual(migratedSettings.reminderSchedule.endMinute, 15)
+        XCTAssertEqual(migratedSettings.streakReminderHour, 17)
+        XCTAssertEqual(migratedSettings.streakReminderMinute, 30)
         XCTAssertEqual(migratedSettings.profileGender, .nonBinary)
         XCTAssertEqual(migratedSettings.profileWeightKG, 72)
         XCTAssertTrue(migratedSettings.hasCompletedOnboarding)
@@ -191,7 +213,11 @@ final class RepositoryTests: XCTestCase {
 
         let settings = try JSONDecoder().decode(UserHydrationSettings.self, from: data)
         XCTAssertEqual(settings.glassDesign, .tumbler)
+        XCTAssertEqual(settings.reminderSchedule.startMinute, 0)
+        XCTAssertEqual(settings.reminderSchedule.endMinute, 0)
         XCTAssertFalse(settings.streakNotificationsEnabled)
+        XCTAssertEqual(settings.streakReminderHour, 18)
+        XCTAssertEqual(settings.streakReminderMinute, 0)
         XCTAssertFalse(settings.hasCompletedOnboarding)
     }
 

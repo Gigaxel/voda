@@ -178,6 +178,9 @@ public final class HydrationAppState: ObservableObject {
         update(&next)
         next.dailyGoalML = HydrationValidation.validatedGoal(next.dailyGoalML)
         next.defaultAmountML = HydrationValidation.validatedDefaultAmount(next.defaultAmountML)
+        next.reminderSchedule = HydrationValidation.validatedReminderSchedule(next.reminderSchedule)
+        next.streakReminderHour = HydrationValidation.validatedHour(next.streakReminderHour)
+        next.streakReminderMinute = HydrationValidation.validatedMinute(next.streakReminderMinute)
         if let weightKG = next.profileWeightKG {
             next.profileWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
         }

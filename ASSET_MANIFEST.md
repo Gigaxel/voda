@@ -14,8 +14,6 @@ Avoid text embedded in generated images unless explicitly required.
 
 Recommended asset catalog names:
 
-- `AppIconEmpty`
-- `AppIconMid`
 - `GlassHero`
 - `WaterTextureAqua`
 - `DropletCluster`
@@ -31,7 +29,7 @@ Recommended asset catalog names:
 
 ### 1. App Icon Source
 
-Purpose: Source image for app icon variants.
+Purpose: Source image for the full-glass app icon.
 
 Recommended output: 1024 x 1024 PNG.
 

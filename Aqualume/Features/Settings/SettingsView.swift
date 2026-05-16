@@ -31,15 +31,20 @@ struct SettingsView: View {
 
                 Section("Reminders") {
                     Toggle("Reminders", isOn: reminderBinding)
-                    Stepper("Start: \(state.settings.reminderSchedule.startHour):00", value: startHourBinding, in: 0...23)
-                    Stepper("End: \(state.settings.reminderSchedule.endHour):00", value: endHourBinding, in: 0...23)
-                    Stepper("Every \(state.settings.reminderSchedule.intervalMinutes) min", value: intervalBinding, in: 60...240, step: 30)
+                    TimePickerRow("Start", selection: reminderStartTimeBinding)
+                    TimePickerRow("End", selection: reminderEndTimeBinding)
+                    Stepper(
+                        "Every \(state.settings.reminderSchedule.intervalMinutes) min",
+                        value: intervalBinding,
+                        in: HydrationValidation.minimumReminderIntervalMinutes...HydrationValidation.maximumReminderIntervalMinutes,
+                        step: 30
+                    )
                 }
 
                 Section("Streak") {
                     LabeledContent("Current", value: "\(state.streakStatus.currentDays)d")
                     LabeledContent("Best", value: "\(state.streakStatus.bestDays)d")
-                    LabeledContent("Reminder", value: "18:00")
+                    TimePickerRow("Reminder", selection: streakReminderTimeBinding)
                     Toggle("Streak notifications", isOn: streakNotificationBinding)
                 }
 
@@ -131,17 +136,63 @@ struct SettingsView: View {
         )
     }
 
-    private var startHourBinding: Binding<Int> {
+    private var reminderStartTimeBinding: Binding<Date> {
         Binding(
-            get: { state.settings.reminderSchedule.startHour },
-            set: { value in Task { await state.updateSettings { $0.reminderSchedule.startHour = value } } }
+            get: {
+                timeDate(
+                    hour: state.settings.reminderSchedule.startHour,
+                    minute: state.settings.reminderSchedule.startMinute
+                )
+            },
+            set: { value in
+                let time = timeComponents(from: value)
+                Task {
+                    await state.updateSettings {
+                        $0.reminderSchedule.startHour = time.hour
+                        $0.reminderSchedule.startMinute = time.minute
+                    }
+                }
+            }
         )
     }
 
-    private var endHourBinding: Binding<Int> {
+    private var reminderEndTimeBinding: Binding<Date> {
         Binding(
-            get: { state.settings.reminderSchedule.endHour },
-            set: { value in Task { await state.updateSettings { $0.reminderSchedule.endHour = value } } }
+            get: {
+                timeDate(
+                    hour: state.settings.reminderSchedule.endHour,
+                    minute: state.settings.reminderSchedule.endMinute
+                )
+            },
+            set: { value in
+                let time = timeComponents(from: value)
+                Task {
+                    await state.updateSettings {
+                        $0.reminderSchedule.endHour = time.hour
+                        $0.reminderSchedule.endMinute = time.minute
+                    }
+                }
+            }
+        )
+    }
+
+    private var streakReminderTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                timeDate(
+                    hour: state.settings.streakReminderHour,
+                    minute: state.settings.streakReminderMinute
+                )
+            },
+            set: { value in
+                let time = timeComponents(from: value)
+                Task {
+                    await state.updateSettings {
+                        $0.streakReminderHour = time.hour
+                        $0.streakReminderMinute = time.minute
+                    }
+                }
+            }
         )
     }
 
@@ -150,5 +201,74 @@ struct SettingsView: View {
             get: { state.settings.reminderSchedule.intervalMinutes },
             set: { value in Task { await state.updateSettings { $0.reminderSchedule.intervalMinutes = value } } }
         )
+    }
+
+    private func timeDate(hour: Int, minute: Int) -> Date {
+        var components = DateComponents()
+        components.calendar = .current
+        components.year = 2000
+        components.month = 1
+        components.day = 1
+        components.hour = HydrationValidation.validatedHour(hour)
+        components.minute = HydrationValidation.validatedMinute(minute)
+        return components.date ?? Date(timeIntervalSinceReferenceDate: 0)
+    }
+
+    private func timeComponents(from date: Date) -> (hour: Int, minute: Int) {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (
+            HydrationValidation.validatedHour(components.hour ?? 0),
+            HydrationValidation.validatedMinute(components.minute ?? 0)
+        )
+    }
+}
+
+private struct TimePickerRow: View {
+    let title: String
+    @Binding private var selection: Date
+    @State private var draftSelection: Date
+    @State private var isPresented = false
+
+    init(_ title: String, selection: Binding<Date>) {
+        self.title = title
+        _selection = selection
+        _draftSelection = State(initialValue: selection.wrappedValue)
+    }
+
+    var body: some View {
+        Button {
+            draftSelection = selection
+            isPresented = true
+        } label: {
+            LabeledContent(title, value: selection.formatted(date: .omitted, time: .shortened))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens time picker")
+        .sheet(isPresented: $isPresented) {
+            NavigationStack {
+                DatePicker(title, selection: $draftSelection, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .navigationTitle(title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                isPresented = false
+                            }
+                        }
+
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                selection = draftSelection
+                                isPresented = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
+        }
     }
 }

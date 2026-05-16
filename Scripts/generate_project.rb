@@ -88,8 +88,6 @@ ios_target.build_configurations.each do |config|
   config.build_settings["SUPPORTED_PLATFORMS"] = "iphoneos iphonesimulator"
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
   config.build_settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIconFull"
-  config.build_settings["ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES"] = "AppIconEmpty AppIconMid"
-  config.build_settings["ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS"] = "YES"
 end
 add_sources(ios_target, (shared_paths + ios_paths).map { |p| refs_by_path[p] })
 add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
