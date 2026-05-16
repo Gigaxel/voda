@@ -62,15 +62,6 @@ open Aqualume.xcodeproj
 
 For device runs, select your development team on the app, watch app, and widget targets. HealthKit and App Group behavior require valid signing and capabilities.
 
-## Project Docs
-
-- `AQUALUME_SPEC.md`: product requirements and acceptance criteria.
-- `DESIGN_SYSTEM.md`: visual system, motion, typography, and tone.
-- `ASSET_MANIFEST.md`: generated asset list and prompts.
-- `IMPLEMENTATION_PLAN.md`: milestone-by-milestone implementation plan.
-- `VALIDATION.md`: CLI-first validation workflow.
-- `PROGRESS.md`: milestone status, validation log, and known blockers.
-
 ## Known Caveats
 
 - HealthKit live write validation requires a signed build with the HealthKit entitlement.
