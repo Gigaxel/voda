@@ -41,6 +41,13 @@ struct SettingsView: View {
                     )
                 }
 
+                Section("Live Activity") {
+                    Toggle("Show on Lock Screen", isOn: liveActivityBinding)
+                    Text("Track today's progress on the Lock Screen and Dynamic Island.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Streak") {
                     LabeledContent("Current", value: "\(state.streakStatus.currentDays)d")
                     LabeledContent("Best", value: "\(state.streakStatus.bestDays)d")
@@ -133,6 +140,16 @@ struct SettingsView: View {
         Binding(
             get: { state.settings.streakNotificationsEnabled },
             set: { value in Task { await state.updateSettings { $0.streakNotificationsEnabled = value } } }
+        )
+    }
+
+    private var liveActivityBinding: Binding<Bool> {
+        Binding(
+            get: { LiveActivityPreference.isEnabled },
+            set: { value in
+                LiveActivityPreference.setEnabled(value)
+                Task { await state.refreshLiveActivity() }
+            }
         )
     }
 

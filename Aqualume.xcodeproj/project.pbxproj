@@ -20,7 +20,9 @@
 		52E6601B423760B4561251E9 /* AqualumeWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		57BDDDE6F2E4797AF9037668 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD00E1D142CF1F9AA872EE6 /* SettingsView.swift */; };
 		598B82941A193B22565A1394 /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
+		5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */; };
 		616651BC39A0AD22AA11E7D8 /* AqualumeHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */; };
+		65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */; };
 		6C2FF66E329D93263910B3BC /* WatchConnectivityHydrationSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */; };
 		6E8A694B73061077530368A9 /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		70E55F3804E1E0D1C24BDCA8 /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
@@ -31,15 +33,18 @@
 		85224D66C8700E91FC28FB5B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFE0EC7521E5FE9EE7753D8 /* Foundation.framework */; };
 		8590F7FBEB3C7FB0BA2B0188 /* AppleHealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED151E7CBBF0F6D78DB952C5 /* AppleHealthKitService.swift */; };
 		892D677D3230FC1E439789F9 /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
+		90207E14919CB8BE22DA387A /* HydrationActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */; };
 		903AA3202A6A01E7139E825E /* WatchConnectivityHydrationSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */; };
 		915CE87837D56D4C0EB348A7 /* AqualumeWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D7ED536235B6AD001B5BCD /* AqualumeWidgetBundle.swift */; };
 		91B83D27D5999E994732FCDC /* HydrationServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36EF478036E60AA36AC32AC /* HydrationServices.swift */; };
 		949600CF3E2809454AFF9B68 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFE0EC7521E5FE9EE7753D8 /* Foundation.framework */; };
 		9D410AA9ADD2FEC6C14BAE3B /* WatchHydrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6919DA666C08388368A504A5 /* WatchHydrationView.swift */; };
 		9FD817DDEEAB64F77DEC4A6D /* AqualumeRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E92A3946750C4350B1A4FAC /* AqualumeRootView.swift */; };
+		A8CF94EA4ACB403B09713839 /* HydrationActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */; };
 		ACAF007BB5402B8DF24378D4 /* LocalReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5A76FC5FE0E4056E35D23A /* LocalReminderScheduler.swift */; };
 		B086DDDFB38EDE0153A3E865 /* AqualumeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8185F7E67C1D532944CA1938 /* AqualumeWatchApp.swift */; };
 		B41E9680616652C9ADC0D7BD /* QuickAmountControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE26CC02943B9D88A75E8A7 /* QuickAmountControl.swift */; };
+		B4CAADE784D8DA5CBE817709 /* HydrationLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */; };
 		B6C83B6785FEA6C34DC20E1A /* HydrationGlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7C419291CDDAD5E1056DCB /* HydrationGlassView.swift */; };
 		B8ADCDCB71F3CCF7A53A9F37 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 38693FC3BF8DFDBCB2B8B140 /* Foundation.framework */; };
 		C25DBBD2D217022C188C5425 /* ProgressReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51324BDED92EFEF127A9319 /* ProgressReadout.swift */; };
@@ -100,6 +105,7 @@
 		425F93843E06A8B7FA1E2789 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Aqualume/Resources/Info.plist; sourceTree = "<group>"; };
 		4AB2EF4E01625AFE4850A6A0 /* AqualumeProgressWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeProgressWidget.swift; path = AqualumeWidget/AqualumeProgressWidget.swift; sourceTree = "<group>"; };
 		4F632FCBE9F0890E053B4F07 /* ConfettiCelebrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ConfettiCelebrationView.swift; path = Aqualume/Features/Home/ConfettiCelebrationView.swift; sourceTree = "<group>"; };
+		5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationTrendChart.swift; path = Aqualume/Features/History/HydrationTrendChart.swift; sourceTree = "<group>"; };
 		60298CFD3A79C17A92083C9A /* AqualumeWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AqualumeWidget.entitlements; path = AqualumeWidget/AqualumeWidget.entitlements; sourceTree = "<group>"; };
 		62EA8F5F9AEBDE92F2EA251C /* HydrationLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationLogicTests.swift; path = AqualumeTests/HydrationLogicTests.swift; sourceTree = "<group>"; };
 		6919DA666C08388368A504A5 /* WatchHydrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchHydrationView.swift; path = AqualumeWatchApp/WatchHydrationView.swift; sourceTree = "<group>"; };
@@ -110,6 +116,8 @@
 		8319A5D5329AC5A63E562F9C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AqualumeWatchApp/Info.plist; sourceTree = "<group>"; };
 		8E92A3946750C4350B1A4FAC /* AqualumeRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeRootView.swift; path = Aqualume/Features/Home/AqualumeRootView.swift; sourceTree = "<group>"; };
 		9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AqualumeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationLiveActivity.swift; path = AqualumeWidget/HydrationLiveActivity.swift; sourceTree = "<group>"; };
+		AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationActivityAttributes.swift; path = Aqualume/LiveActivity/HydrationActivityAttributes.swift; sourceTree = "<group>"; };
 		AB12D079508BA43E54FBE780 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AqualumeWidget/Info.plist; sourceTree = "<group>"; };
 		ABD00E1D142CF1F9AA872EE6 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Aqualume/Features/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		AEE26CC02943B9D88A75E8A7 /* QuickAmountControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = QuickAmountControl.swift; path = Aqualume/SharedUI/QuickAmountControl.swift; sourceTree = "<group>"; };
@@ -121,6 +129,7 @@
 		D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationAppState.swift; path = Aqualume/Features/Home/HydrationAppState.swift; sourceTree = "<group>"; };
 		D91E97531DDA56ABDD86419F /* HydrationRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationRepository.swift; path = Aqualume/Persistence/HydrationRepository.swift; sourceTree = "<group>"; };
 		DD7C419291CDDAD5E1056DCB /* HydrationGlassView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationGlassView.swift; path = Aqualume/SharedUI/HydrationGlassView.swift; sourceTree = "<group>"; };
+		EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LiveActivityController.swift; path = Aqualume/LiveActivity/LiveActivityController.swift; sourceTree = "<group>"; };
 		ED151E7CBBF0F6D78DB952C5 /* AppleHealthKitService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleHealthKitService.swift; path = Aqualume/Services/AppleHealthKitService.swift; sourceTree = "<group>"; };
 		F51324BDED92EFEF127A9319 /* ProgressReadout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgressReadout.swift; path = Aqualume/SharedUI/ProgressReadout.swift; sourceTree = "<group>"; };
 		FDE6F72D543EF9817FF1FA80 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Aqualume/Resources/Assets.xcassets; sourceTree = "<group>"; };
@@ -236,6 +245,10 @@
 				3FACA8531E919BC02441054F /* AqualumeWatchApp.entitlements */,
 				AB12D079508BA43E54FBE780 /* Info.plist */,
 				60298CFD3A79C17A92083C9A /* AqualumeWidget.entitlements */,
+				5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */,
+				AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */,
+				EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */,
+				9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -399,6 +412,8 @@
 				29D4A949CE06B5990846E901 /* HydrationServices.swift in Sources */,
 				E04C27F820F2AAEEB81E6C3A /* AqualumeProgressWidget.swift in Sources */,
 				915CE87837D56D4C0EB348A7 /* AqualumeWidgetBundle.swift in Sources */,
+				A8CF94EA4ACB403B09713839 /* HydrationActivityAttributes.swift in Sources */,
+				B4CAADE784D8DA5CBE817709 /* HydrationLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -425,6 +440,9 @@
 				316BBFA1880845085610CB4E /* HydrationGlassView.swift in Sources */,
 				C25DBBD2D217022C188C5425 /* ProgressReadout.swift in Sources */,
 				B41E9680616652C9ADC0D7BD /* QuickAmountControl.swift in Sources */,
+				5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */,
+				90207E14919CB8BE22DA387A /* HydrationActivityAttributes.swift in Sources */,
+				65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

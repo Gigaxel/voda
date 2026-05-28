@@ -19,6 +19,14 @@ struct HistoryView: View {
                 .pickerStyle(.segmented)
             }
 
+            Section("Trend") {
+                HydrationTrendChart(
+                    summaries: summaries,
+                    unitSystem: state.settings.unitSystem
+                )
+                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+            }
+
             Section {
                 HistoryStatsGrid(
                     summaries: summaries,

@@ -1,4 +1,5 @@
 import AppIntents
+import ActivityKit
 import SwiftUI
 import WidgetKit
 
@@ -30,7 +31,13 @@ struct AqualumeProgressWidget: Widget {
         }
         .configurationDisplayName("Aqualume")
         .description("See today's water progress and add a glass.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .accessoryCircular,
+            .accessoryRectangular,
+            .accessoryInline
+        ])
         .contentMarginsDisabled()
     }
 }
@@ -39,16 +46,23 @@ struct AqualumeWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: AqualumeWidgetEntry
 
+    private var progress: Double { entry.snapshot.progress }
+    private var percent: Int { Int((progress * 100).rounded()) }
+
     var body: some View {
-        Group {
-            if family == .systemMedium {
-                mediumLayout
-            } else {
-                smallLayout
-            }
-        }
-        .containerBackground(for: .widget) {
-            WidgetSurface()
+        switch family {
+        case .accessoryCircular:
+            accessoryCircular
+        case .accessoryRectangular:
+            accessoryRectangular
+        case .accessoryInline:
+            Label("\(amountText) of \(goalText)", systemImage: "drop.fill")
+        case .systemMedium:
+            mediumLayout
+                .containerBackground(for: .widget) { WidgetSurface() }
+        default:
+            smallLayout
+                .containerBackground(for: .widget) { WidgetSurface() }
         }
     }
 
@@ -64,7 +78,7 @@ struct AqualumeWidgetView: View {
         VStack(spacing: 7) {
             Spacer(minLength: 0)
 
-            WidgetGlass(progress: entry.snapshot.progress)
+            WidgetGlass(progress: progress)
                 .frame(width: 72, height: 96)
 
             VStack(spacing: 1) {
@@ -87,7 +101,7 @@ struct AqualumeWidgetView: View {
 
     private var mediumLayout: some View {
         HStack(spacing: 18) {
-            WidgetGlass(progress: entry.snapshot.progress)
+            WidgetGlass(progress: progress)
                 .frame(width: 82, height: 110)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -113,6 +127,31 @@ struct AqualumeWidgetView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
+    }
+
+    private var accessoryCircular: some View {
+        Gauge(value: progress) {
+            Image(systemName: "drop.fill")
+        } currentValueLabel: {
+            Text("\(percent)")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .tint(WidgetPalette.water)
+        .containerBackground(.clear, for: .widget)
+    }
+
+    private var accessoryRectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label(amountText, systemImage: "drop.fill")
+                .font(.headline)
+                .widgetAccentable()
+            ProgressView(value: progress)
+                .tint(WidgetPalette.water)
+            Text("\(percent)% of \(goalText)")
+                .font(.caption2)
+        }
+        .containerBackground(.clear, for: .widget)
     }
 }
 
@@ -205,7 +244,7 @@ private struct QuickAddButton: View {
     }
 }
 
-struct QuickAddWaterIntent: AppIntent {
+struct QuickAddWaterIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Add Water"
     static let description = IntentDescription("Add the default glass amount to Aqualume.")
 
@@ -229,6 +268,28 @@ struct QuickAddWaterIntent: AppIntent {
             goalML: settings.dailyGoalML
         )
         try await repository.appendLog(HydrationLog(amountML: amount, source: .widget))
+        let logs = try await repository.loadLogs()
+        let calculator = HydrationCalculator()
+        let state = HydrationActivityAttributes.ContentState(
+            totalML: calculator.total(on: Date(), logs: logs),
+            goalML: settings.dailyGoalML,
+            unitSystem: settings.unitSystem,
+            defaultAmountML: settings.defaultAmountML
+        )
+        let content = ActivityContent(state: state, staleDate: HydrationActivityAttributes.staleDate())
+        let activities = Activity<HydrationActivityAttributes>.activities
+        if activities.isEmpty {
+            if LiveActivityPreference.isEnabled, ActivityAuthorizationInfo().areActivitiesEnabled {
+                _ = try? Activity.request(
+                    attributes: HydrationActivityAttributes(),
+                    content: content
+                )
+            }
+        } else {
+            for activity in activities {
+                await activity.update(content)
+            }
+        }
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
@@ -247,7 +308,7 @@ private struct WidgetSurface: View {
     }
 }
 
-private enum WidgetPalette {
+enum WidgetPalette {
     static let ink = Color(red: 0.06, green: 0.20, blue: 0.24)
     static let muted = Color(red: 0.30, green: 0.50, blue: 0.55)
     static let soft = Color(red: 0.42, green: 0.62, blue: 0.66)

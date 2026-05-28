@@ -59,6 +59,11 @@ ios_paths = Dir[
   "Aqualume/Services/LocalReminderScheduler.swift"
 ].sort
 
+# Live Activity: attributes and preferences are shared with the widget; the
+# controller is iOS app only because it owns foreground lifecycle timers.
+live_activity_shared_paths = ["Aqualume/LiveActivity/HydrationActivityAttributes.swift"]
+live_activity_app_paths = ["Aqualume/LiveActivity/LiveActivityController.swift"]
+
 watch_paths = Dir["AqualumeWatchApp/**/*.swift"].sort
 widget_paths = Dir["AqualumeWidget/**/*.swift"].sort
 test_paths = Dir["AqualumeTests/**/*.swift"].sort
@@ -66,7 +71,7 @@ resource_paths = [
   "Aqualume/Resources/Assets.xcassets"
 ]
 
-all_paths = (shared_paths + ios_paths + watch_paths + widget_paths + test_paths + resource_paths + [
+all_paths = (shared_paths + ios_paths + live_activity_shared_paths + live_activity_app_paths + watch_paths + widget_paths + test_paths + resource_paths + [
   "Aqualume/Resources/Info.plist",
   "Aqualume/Aqualume.entitlements",
   "AqualumeWatchApp/Info.plist",
@@ -89,7 +94,7 @@ ios_target.build_configurations.each do |config|
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "17.0"
   config.build_settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIconFull"
 end
-add_sources(ios_target, (shared_paths + ios_paths).map { |p| refs_by_path[p] })
+add_sources(ios_target, (shared_paths + ios_paths + live_activity_shared_paths + live_activity_app_paths).map { |p| refs_by_path[p] })
 add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
 
 watch_target = project.new_target(:application, "AqualumeWatchApp", :watchos, "9.4")
@@ -120,7 +125,7 @@ widget_target.build_configurations.each do |config|
   config.build_settings["SKIP_INSTALL"] = "YES"
 end
 widget_shared_paths = shared_paths - ["Aqualume/Services/WatchConnectivityHydrationSyncService.swift"]
-add_sources(widget_target, (widget_shared_paths + widget_paths).map { |p| refs_by_path[p] })
+add_sources(widget_target, (widget_shared_paths + live_activity_shared_paths + widget_paths).map { |p| refs_by_path[p] })
 add_resources(widget_target, resource_paths.map { |p| refs_by_path[p] })
 
 ios_target.add_dependency(widget_target)

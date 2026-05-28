@@ -10,6 +10,16 @@ struct AqualumeApp: App {
         #if os(iOS)
         let healthKit: HealthKitWaterWriting = AppleHealthKitService()
         let reminders: ReminderScheduling = LocalReminderScheduler()
+        let liveActivity: LiveActivityControlling = LiveActivityController()
+        func refreshLiveActivity(settings: UserHydrationSettings) async {
+            let logs = (try? await repository.loadLogs()) ?? []
+            await liveActivity.refresh(
+                totalML: HydrationCalculator().total(on: Date(), logs: logs),
+                goalML: settings.dailyGoalML,
+                unitSystem: settings.unitSystem,
+                defaultAmountML: settings.defaultAmountML
+            )
+        }
         let sync: HydrationSyncing = WatchConnectivityHydrationSyncService(
             onLog: { log in
                 Task {
@@ -19,6 +29,7 @@ struct AqualumeApp: App {
                         goalML: settings.dailyGoalML
                     )
                     try? await repository.appendLog(log)
+                    await refreshLiveActivity(settings: settings)
                 }
             },
             onSettings: { settings in
@@ -28,6 +39,7 @@ struct AqualumeApp: App {
                         dateKey: HydrationCalculator().dateKey(for: Date()),
                         goalML: settings.dailyGoalML
                     )
+                    await refreshLiveActivity(settings: settings)
                 }
             }
         )
@@ -35,6 +47,7 @@ struct AqualumeApp: App {
         let healthKit: HealthKitWaterWriting = NoOpHealthKitService()
         let reminders: ReminderScheduling = NoOpReminderScheduler()
         let sync: HydrationSyncing = NoOpHydrationSyncService()
+        let liveActivity: LiveActivityControlling = NoOpLiveActivityController()
         #endif
         _state = StateObject(
             wrappedValue: HydrationAppState(
@@ -42,7 +55,8 @@ struct AqualumeApp: App {
                 settingsRepository: repository,
                 healthKit: healthKit,
                 reminders: reminders,
-                sync: sync
+                sync: sync,
+                liveActivity: liveActivity
             )
         )
     }

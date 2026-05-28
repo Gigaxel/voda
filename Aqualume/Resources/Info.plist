@@ -26,6 +26,8 @@
 	<string>Aqualume uses Health access only to write dietary water entries you log.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Aqualume writes water intake to Health when you enable HealthKit.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

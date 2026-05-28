@@ -21,6 +21,7 @@ public final class HydrationAppState: ObservableObject {
     private let healthKit: HealthKitWaterWriting
     private let reminders: ReminderScheduling
     private let sync: HydrationSyncing
+    private let liveActivity: LiveActivityControlling
     private let calculator: HydrationCalculator
     private let now: @Sendable () -> Date
     private var lastStreakNotificationDateKey: String?
@@ -32,6 +33,7 @@ public final class HydrationAppState: ObservableObject {
         healthKit: HealthKitWaterWriting = NoOpHealthKitService(),
         reminders: ReminderScheduling = NoOpReminderScheduler(),
         sync: HydrationSyncing = NoOpHydrationSyncService(),
+        liveActivity: LiveActivityControlling = NoOpLiveActivityController(),
         calculator: HydrationCalculator = HydrationCalculator(),
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -43,6 +45,7 @@ public final class HydrationAppState: ObservableObject {
         self.healthKit = healthKit
         self.reminders = reminders
         self.sync = sync
+        self.liveActivity = liveActivity
         self.calculator = calculator
         self.now = now
         self.currentDateKey = calculator.dateKey(for: now())
@@ -95,6 +98,15 @@ public final class HydrationAppState: ObservableObject {
         currentDateKey = calculator.dateKey(for: now())
     }
 
+    public func refreshLiveActivity() async {
+        await liveActivity.refresh(
+            totalML: todayTotalML,
+            goalML: settings.dailyGoalML,
+            unitSystem: settings.unitSystem,
+            defaultAmountML: settings.defaultAmountML
+        )
+    }
+
     public func load() async {
         do {
             refreshForCurrentDate()
@@ -106,6 +118,7 @@ public final class HydrationAppState: ObservableObject {
             await sync.activate()
             await refreshHydrationReminders()
             await refreshStreakReminder()
+            await refreshLiveActivity()
             hasLoaded = true
         } catch {
             statusMessage = "Unable to load hydration data."
@@ -146,6 +159,7 @@ public final class HydrationAppState: ObservableObject {
             }
             await refreshStreakReminder()
             reloadWidgets()
+            await refreshLiveActivity()
         } catch {
             statusMessage = "Unable to save water."
         }
@@ -167,6 +181,7 @@ public final class HydrationAppState: ObservableObject {
             }
             await refreshStreakReminder()
             reloadWidgets()
+            await refreshLiveActivity()
         } catch {
             statusMessage = "Unable to undo latest log."
         }
@@ -192,6 +207,7 @@ public final class HydrationAppState: ObservableObject {
             await refreshStreakReminder()
             await sync.sendSettings(settings)
             reloadWidgets()
+            await refreshLiveActivity()
         } catch {
             statusMessage = "Unable to update settings."
         }

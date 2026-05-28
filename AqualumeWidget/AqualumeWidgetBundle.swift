@@ -5,5 +5,6 @@ import SwiftUI
 struct AqualumeWidgetBundle: WidgetBundle {
     var body: some Widget {
         AqualumeProgressWidget()
+        HydrationLiveActivity()
     }
 }

@@ -77,3 +77,17 @@ public struct NoOpHydrationSyncService: HydrationSyncing {
     public func sendLog(_ log: HydrationLog) async {}
     public func sendSettings(_ settings: UserHydrationSettings) async {}
 }
+
+/// Drives the Lock Screen / Dynamic Island Live Activity. Defined here (free of
+/// ActivityKit) so non-iOS targets can use the no-op without importing it.
+public protocol LiveActivityControlling: Sendable {
+    func refresh(totalML: Int, goalML: Int, unitSystem: HydrationUnitSystem, defaultAmountML: Int) async
+    func end() async
+}
+
+public struct NoOpLiveActivityController: LiveActivityControlling {
+    public init() {}
+
+    public func refresh(totalML: Int, goalML: Int, unitSystem: HydrationUnitSystem, defaultAmountML: Int) async {}
+    public func end() async {}
+}
