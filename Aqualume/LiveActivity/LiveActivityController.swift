@@ -40,7 +40,7 @@ public actor LiveActivityController: LiveActivityControlling {
         scheduleEndAtDayBoundary(staleDate)
     }
 
-    public func end() async {
+    private func end() async {
         dayBoundaryEndTask?.cancel()
         dayBoundaryEndTask = nil
         for activity in Activity<HydrationActivityAttributes>.activities {

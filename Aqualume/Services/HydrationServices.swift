@@ -33,9 +33,7 @@ public struct NoOpHealthKitService: HealthKitWaterWriting {
 }
 
 public protocol ReminderScheduling: Sendable {
-    func authorizationStatus() async -> Bool
     func requestAuthorization() async throws -> Bool
-    func scheduleReminders(settings: UserHydrationSettings) async throws
     func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws
     func cancelReminders() async
     func scheduleStreakReminder(
@@ -50,9 +48,7 @@ public protocol ReminderScheduling: Sendable {
 public struct NoOpReminderScheduler: ReminderScheduling {
     public init() {}
 
-    public func authorizationStatus() async -> Bool { false }
     public func requestAuthorization() async throws -> Bool { false }
-    public func scheduleReminders(settings: UserHydrationSettings) async throws {}
     public func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws {}
     public func cancelReminders() async {}
     public func scheduleStreakReminder(
@@ -82,12 +78,10 @@ public struct NoOpHydrationSyncService: HydrationSyncing {
 /// ActivityKit) so non-iOS targets can use the no-op without importing it.
 public protocol LiveActivityControlling: Sendable {
     func refresh(totalML: Int, goalML: Int, unitSystem: HydrationUnitSystem, defaultAmountML: Int) async
-    func end() async
 }
 
 public struct NoOpLiveActivityController: LiveActivityControlling {
     public init() {}
 
     public func refresh(totalML: Int, goalML: Int, unitSystem: HydrationUnitSystem, defaultAmountML: Int) async {}
-    public func end() async {}
 }

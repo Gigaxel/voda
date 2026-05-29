@@ -21,17 +21,8 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
         self.now = now
     }
 
-    public func authorizationStatus() async -> Bool {
-        let settings = await center.notificationSettings()
-        return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-    }
-
     public func requestAuthorization() async throws -> Bool {
         try await center.requestAuthorization(options: [.alert, .sound])
-    }
-
-    public func scheduleReminders(settings: UserHydrationSettings) async throws {
-        try await scheduleReminders(settings: settings, includingToday: true)
     }
 
     public func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws {

@@ -5,22 +5,6 @@ public enum HydrationUnitSystem: String, Codable, CaseIterable, Equatable, Senda
     case imperial
 }
 
-public enum HydrationGlassDesign: String, Codable, CaseIterable, Equatable, Sendable {
-    case classic
-    case prism
-    case tumbler
-    case flute
-
-    public var displayName: String {
-        switch self {
-        case .classic: "Classic"
-        case .prism: "Prism"
-        case .tumbler: "Tumbler"
-        case .flute: "Flute"
-        }
-    }
-}
-
 public enum HydrationProfileGender: String, Codable, CaseIterable, Equatable, Sendable {
     case female
     case male
@@ -95,29 +79,12 @@ public struct ReminderSchedule: Codable, Equatable, Sendable {
         self.intervalMinutes = intervalMinutes
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case startHour
-        case startMinute
-        case endHour
-        case endMinute
-        case intervalMinutes
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        startHour = try container.decodeIfPresent(Int.self, forKey: .startHour) ?? 9
-        startMinute = try container.decodeIfPresent(Int.self, forKey: .startMinute) ?? 0
-        endHour = try container.decodeIfPresent(Int.self, forKey: .endHour) ?? 21
-        endMinute = try container.decodeIfPresent(Int.self, forKey: .endMinute) ?? 0
-        intervalMinutes = try container.decodeIfPresent(Int.self, forKey: .intervalMinutes) ?? 120
-    }
 }
 
 public struct UserHydrationSettings: Codable, Equatable, Sendable {
     public var dailyGoalML: Int
     public var defaultAmountML: Int
     public var unitSystem: HydrationUnitSystem
-    public var glassDesign: HydrationGlassDesign
     public var profileGender: HydrationProfileGender?
     public var profileWeightKG: Double?
     public var hasCompletedOnboarding: Bool
@@ -132,7 +99,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         dailyGoalML: Int = 2_000,
         defaultAmountML: Int = 250,
         unitSystem: HydrationUnitSystem = .metric,
-        glassDesign: HydrationGlassDesign = .tumbler,
         profileGender: HydrationProfileGender? = nil,
         profileWeightKG: Double? = nil,
         hasCompletedOnboarding: Bool = false,
@@ -146,7 +112,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.dailyGoalML = dailyGoalML
         self.defaultAmountML = defaultAmountML
         self.unitSystem = unitSystem
-        self.glassDesign = glassDesign
         self.profileGender = profileGender
         self.profileWeightKG = profileWeightKG
         self.hasCompletedOnboarding = hasCompletedOnboarding
@@ -158,40 +123,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.healthKitEnabled = healthKitEnabled
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case dailyGoalML
-        case defaultAmountML
-        case unitSystem
-        case glassDesign
-        case profileGender
-        case profileWeightKG
-        case hasCompletedOnboarding
-        case remindersEnabled
-        case reminderSchedule
-        case streakNotificationsEnabled
-        case streakReminderHour
-        case streakReminderMinute
-        case healthKitEnabled
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        dailyGoalML = try container.decodeIfPresent(Int.self, forKey: .dailyGoalML) ?? 2_000
-        defaultAmountML = try container.decodeIfPresent(Int.self, forKey: .defaultAmountML) ?? 250
-        unitSystem = try container.decodeIfPresent(HydrationUnitSystem.self, forKey: .unitSystem) ?? .metric
-        glassDesign = try container.decodeIfPresent(HydrationGlassDesign.self, forKey: .glassDesign) ?? .tumbler
-        profileGender = try container.decodeIfPresent(HydrationProfileGender.self, forKey: .profileGender)
-        profileWeightKG = try container.decodeIfPresent(Double.self, forKey: .profileWeightKG)
-        hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
-        remindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? false
-        reminderSchedule = try container.decodeIfPresent(ReminderSchedule.self, forKey: .reminderSchedule) ?? ReminderSchedule()
-        streakNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .streakNotificationsEnabled) ?? false
-        streakReminderHour = try container.decodeIfPresent(Int.self, forKey: .streakReminderHour)
-            ?? HydrationReminderDefaults.streakReminderHour
-        streakReminderMinute = try container.decodeIfPresent(Int.self, forKey: .streakReminderMinute)
-            ?? HydrationReminderDefaults.streakReminderMinute
-        healthKitEnabled = try container.decodeIfPresent(Bool.self, forKey: .healthKitEnabled) ?? false
-    }
 }
 
 public struct DailyHydrationSummary: Identifiable, Equatable, Sendable {

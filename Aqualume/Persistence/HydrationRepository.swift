@@ -3,7 +3,6 @@ import SQLite3
 
 public protocol HydrationRepository: Sendable {
     func loadLogs() async throws -> [HydrationLog]
-    func saveLogs(_ logs: [HydrationLog]) async throws
     func appendLog(_ log: HydrationLog) async throws
     func removeLog(id: UUID) async throws
 }
@@ -42,16 +41,6 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
     public func loadLogs() async throws -> [HydrationLog] {
         let database = try SQLiteDatabase(fileURL: fileURL)
         return try SQLiteHydrationStore.loadLogs(from: database)
-    }
-
-    public func saveLogs(_ logs: [HydrationLog]) async throws {
-        let database = try SQLiteDatabase(fileURL: fileURL)
-        try database.transaction {
-            try database.execute("DELETE FROM hydration_logs;")
-            for log in logs.sorted(by: { $0.loggedAt < $1.loggedAt }) {
-                try SQLiteHydrationStore.insertLog(log, into: database)
-            }
-        }
     }
 
     public func appendLog(_ log: HydrationLog) async throws {
@@ -119,10 +108,6 @@ public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepositor
 
     public func loadLogs() async throws -> [HydrationLog] {
         logs
-    }
-
-    public func saveLogs(_ logs: [HydrationLog]) async throws {
-        self.logs = logs
     }
 
     public func appendLog(_ log: HydrationLog) async throws {
@@ -283,17 +268,6 @@ private final class SQLiteDatabase {
         }
     }
 
-    func transaction(_ work: () throws -> Void) throws {
-        try execute("BEGIN IMMEDIATE TRANSACTION;")
-        do {
-            try work()
-            try execute("COMMIT TRANSACTION;")
-        } catch {
-            try? execute("ROLLBACK TRANSACTION;")
-            throw error
-        }
-    }
-
     private func configure() throws {
         try execute("PRAGMA journal_mode = WAL;")
         try execute("PRAGMA foreign_keys = ON;")
@@ -338,19 +312,18 @@ private enum SQLiteHydrationStore {
                 daily_goal_ml INTEGER NOT NULL,
                 default_amount_ml INTEGER NOT NULL,
                 unit_system TEXT NOT NULL,
-                glass_design TEXT NOT NULL,
                 profile_gender TEXT,
                 profile_weight_kg REAL,
-                has_completed_onboarding INTEGER NOT NULL DEFAULT 0,
+                has_completed_onboarding INTEGER NOT NULL,
                 reminders_enabled INTEGER NOT NULL,
                 reminder_start_hour INTEGER NOT NULL,
-                reminder_start_minute INTEGER NOT NULL DEFAULT 0,
+                reminder_start_minute INTEGER NOT NULL,
                 reminder_end_hour INTEGER NOT NULL,
-                reminder_end_minute INTEGER NOT NULL DEFAULT 0,
+                reminder_end_minute INTEGER NOT NULL,
                 reminder_interval_minutes INTEGER NOT NULL,
-                streak_notifications_enabled INTEGER NOT NULL DEFAULT 0,
-                streak_reminder_hour INTEGER NOT NULL DEFAULT 18,
-                streak_reminder_minute INTEGER NOT NULL DEFAULT 0,
+                streak_notifications_enabled INTEGER NOT NULL,
+                streak_reminder_hour INTEGER NOT NULL,
+                streak_reminder_minute INTEGER NOT NULL,
                 healthkit_enabled INTEGER NOT NULL
             );
             """
@@ -363,35 +336,6 @@ private enum SQLiteHydrationStore {
             );
             """
         )
-        if try !settingsTableHasColumn("streak_notifications_enabled", in: database) {
-            try database.execute(
-                "ALTER TABLE settings ADD COLUMN streak_notifications_enabled INTEGER NOT NULL DEFAULT 0;"
-            )
-        }
-        if try !settingsTableHasColumn("profile_gender", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN profile_gender TEXT;")
-        }
-        if try !settingsTableHasColumn("profile_weight_kg", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN profile_weight_kg REAL;")
-        }
-        if try !settingsTableHasColumn("has_completed_onboarding", in: database) {
-            try database.execute(
-                "ALTER TABLE settings ADD COLUMN has_completed_onboarding INTEGER NOT NULL DEFAULT 0;"
-            )
-        }
-        if try !settingsTableHasColumn("reminder_start_minute", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN reminder_start_minute INTEGER NOT NULL DEFAULT 0;")
-        }
-        if try !settingsTableHasColumn("reminder_end_minute", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN reminder_end_minute INTEGER NOT NULL DEFAULT 0;")
-        }
-        if try !settingsTableHasColumn("streak_reminder_hour", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN streak_reminder_hour INTEGER NOT NULL DEFAULT 18;")
-        }
-        if try !settingsTableHasColumn("streak_reminder_minute", in: database) {
-            try database.execute("ALTER TABLE settings ADD COLUMN streak_reminder_minute INTEGER NOT NULL DEFAULT 0;")
-        }
-        try database.execute("PRAGMA user_version = 5;")
     }
 
     static func loadLogs(from database: SQLiteDatabase) throws -> [HydrationLog] {
@@ -460,7 +404,6 @@ private enum SQLiteHydrationStore {
         SELECT daily_goal_ml,
                default_amount_ml,
                unit_system,
-               glass_design,
                profile_gender,
                profile_weight_kg,
                has_completed_onboarding,
@@ -490,35 +433,32 @@ private enum SQLiteHydrationStore {
 
         let unitSystem = columnString(statement, 2)
             .flatMap(HydrationUnitSystem.init(rawValue:)) ?? .metric
-        let glassDesign = columnString(statement, 3)
-            .flatMap(HydrationGlassDesign.init(rawValue:)) ?? .tumbler
-        let profileGender = columnString(statement, 4)
+        let profileGender = columnString(statement, 3)
             .flatMap(HydrationProfileGender.init(rawValue:))
-        let profileWeightKG = sqlite3_column_type(statement, 5) == SQLITE_NULL
+        let profileWeightKG = sqlite3_column_type(statement, 4) == SQLITE_NULL
             ? nil
-            : sqlite3_column_double(statement, 5)
+            : sqlite3_column_double(statement, 4)
         let reminderSchedule = ReminderSchedule(
-            startHour: Int(sqlite3_column_int64(statement, 8)),
-            startMinute: Int(sqlite3_column_int64(statement, 9)),
-            endHour: Int(sqlite3_column_int64(statement, 10)),
-            endMinute: Int(sqlite3_column_int64(statement, 11)),
-            intervalMinutes: Int(sqlite3_column_int64(statement, 12))
+            startHour: Int(sqlite3_column_int64(statement, 7)),
+            startMinute: Int(sqlite3_column_int64(statement, 8)),
+            endHour: Int(sqlite3_column_int64(statement, 9)),
+            endMinute: Int(sqlite3_column_int64(statement, 10)),
+            intervalMinutes: Int(sqlite3_column_int64(statement, 11))
         )
 
         return UserHydrationSettings(
             dailyGoalML: Int(sqlite3_column_int64(statement, 0)),
             defaultAmountML: Int(sqlite3_column_int64(statement, 1)),
             unitSystem: unitSystem,
-            glassDesign: glassDesign,
             profileGender: profileGender,
             profileWeightKG: profileWeightKG,
-            hasCompletedOnboarding: sqlite3_column_int64(statement, 6) == 1,
-            remindersEnabled: sqlite3_column_int64(statement, 7) == 1,
+            hasCompletedOnboarding: sqlite3_column_int64(statement, 5) == 1,
+            remindersEnabled: sqlite3_column_int64(statement, 6) == 1,
             reminderSchedule: reminderSchedule,
-            streakNotificationsEnabled: sqlite3_column_int64(statement, 13) == 1,
-            streakReminderHour: Int(sqlite3_column_int64(statement, 14)),
-            streakReminderMinute: Int(sqlite3_column_int64(statement, 15)),
-            healthKitEnabled: sqlite3_column_int64(statement, 16) == 1
+            streakNotificationsEnabled: sqlite3_column_int64(statement, 12) == 1,
+            streakReminderHour: Int(sqlite3_column_int64(statement, 13)),
+            streakReminderMinute: Int(sqlite3_column_int64(statement, 14)),
+            healthKitEnabled: sqlite3_column_int64(statement, 15) == 1
         )
     }
 
@@ -529,7 +469,6 @@ private enum SQLiteHydrationStore {
             daily_goal_ml,
             default_amount_ml,
             unit_system,
-            glass_design,
             profile_gender,
             profile_weight_kg,
             has_completed_onboarding,
@@ -544,12 +483,11 @@ private enum SQLiteHydrationStore {
             streak_reminder_minute,
             healthkit_enabled
         )
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             daily_goal_ml = excluded.daily_goal_ml,
             default_amount_ml = excluded.default_amount_ml,
             unit_system = excluded.unit_system,
-            glass_design = excluded.glass_design,
             profile_gender = excluded.profile_gender,
             profile_weight_kg = excluded.profile_weight_kg,
             has_completed_onboarding = excluded.has_completed_onboarding,
@@ -570,20 +508,19 @@ private enum SQLiteHydrationStore {
         try database.bind(settings.dailyGoalML, at: 1, in: statement)
         try database.bind(settings.defaultAmountML, at: 2, in: statement)
         try database.bind(settings.unitSystem.rawValue, at: 3, in: statement)
-        try database.bind(settings.glassDesign.rawValue, at: 4, in: statement)
-        try database.bind(settings.profileGender?.rawValue, at: 5, in: statement)
-        try database.bind(settings.profileWeightKG, at: 6, in: statement)
-        try database.bind(settings.hasCompletedOnboarding, at: 7, in: statement)
-        try database.bind(settings.remindersEnabled, at: 8, in: statement)
-        try database.bind(settings.reminderSchedule.startHour, at: 9, in: statement)
-        try database.bind(settings.reminderSchedule.startMinute, at: 10, in: statement)
-        try database.bind(settings.reminderSchedule.endHour, at: 11, in: statement)
-        try database.bind(settings.reminderSchedule.endMinute, at: 12, in: statement)
-        try database.bind(settings.reminderSchedule.intervalMinutes, at: 13, in: statement)
-        try database.bind(settings.streakNotificationsEnabled, at: 14, in: statement)
-        try database.bind(settings.streakReminderHour, at: 15, in: statement)
-        try database.bind(settings.streakReminderMinute, at: 16, in: statement)
-        try database.bind(settings.healthKitEnabled, at: 17, in: statement)
+        try database.bind(settings.profileGender?.rawValue, at: 4, in: statement)
+        try database.bind(settings.profileWeightKG, at: 5, in: statement)
+        try database.bind(settings.hasCompletedOnboarding, at: 6, in: statement)
+        try database.bind(settings.remindersEnabled, at: 7, in: statement)
+        try database.bind(settings.reminderSchedule.startHour, at: 8, in: statement)
+        try database.bind(settings.reminderSchedule.startMinute, at: 9, in: statement)
+        try database.bind(settings.reminderSchedule.endHour, at: 10, in: statement)
+        try database.bind(settings.reminderSchedule.endMinute, at: 11, in: statement)
+        try database.bind(settings.reminderSchedule.intervalMinutes, at: 12, in: statement)
+        try database.bind(settings.streakNotificationsEnabled, at: 13, in: statement)
+        try database.bind(settings.streakReminderHour, at: 14, in: statement)
+        try database.bind(settings.streakReminderMinute, at: 15, in: statement)
+        try database.bind(settings.healthKitEnabled, at: 16, in: statement)
         try database.stepDone(statement, sql: sql)
     }
 
@@ -627,24 +564,6 @@ private enum SQLiteHydrationStore {
         try database.bind(dateKey, at: 1, in: statement)
         try database.bind(goalML, at: 2, in: statement)
         try database.stepDone(statement, sql: sql)
-    }
-
-    private static func settingsTableHasColumn(_ column: String, in database: SQLiteDatabase) throws -> Bool {
-        let statement = try database.prepare("PRAGMA table_info(settings);")
-        defer { sqlite3_finalize(statement) }
-
-        var result = sqlite3_step(statement)
-        while result == SQLITE_ROW {
-            if columnString(statement, 1) == column {
-                return true
-            }
-            result = sqlite3_step(statement)
-        }
-
-        guard result == SQLITE_DONE else {
-            throw SQLiteHydrationStoreError.step(sql: "PRAGMA table_info(settings);", message: database.errorMessage)
-        }
-        return false
     }
 
     private static func columnString(_ statement: OpaquePointer?, _ index: Int32) -> String? {

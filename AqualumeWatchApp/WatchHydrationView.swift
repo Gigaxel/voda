@@ -14,7 +14,6 @@ struct WatchHydrationView: View {
             HydrationGlassView(
                 progress: state.progress,
                 reachedGoal: state.hasReachedGoal,
-                design: .tumbler,
                 rippleID: rippleID,
                 floatingAmount: nil,
                 reduceMotion: reduceMotion

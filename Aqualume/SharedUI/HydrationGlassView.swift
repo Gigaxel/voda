@@ -14,7 +14,6 @@ struct HydrationGlassView: View {
 
     let progress: Double
     let reachedGoal: Bool
-    let design: HydrationGlassDesign
     let rippleID: UUID
     let floatingAmount: String?
     let reduceMotion: Bool
@@ -106,7 +105,7 @@ struct HydrationGlassView: View {
 
     private func drawGlass(in context: inout GraphicsContext, size: CGSize, date: Date) {
         let isDark = colorScheme == .dark
-        let geometry = GlassGeometry(design: design, size: size)
+        let geometry = GlassGeometry(size: size)
         let glassRect = geometry.rect
         let topLeft = CGPoint(x: glassRect.minX + glassRect.width * geometry.topInset, y: glassRect.minY)
         let topRight = CGPoint(x: glassRect.maxX - glassRect.width * geometry.topInset, y: glassRect.minY)
@@ -256,33 +255,12 @@ private struct GlassGeometry {
     let rimLift: CGFloat
     let rimDepth: CGFloat
 
-    init(design: HydrationGlassDesign, size: CGSize) {
-        switch design {
-        case .classic:
-            rect = CGRect(x: size.width * 0.18, y: size.height * 0.06, width: size.width * 0.64, height: size.height * 0.86)
-            topInset = 0.12
-            bottomInset = 0.08
-            rimLift = 12
-            rimDepth = 18
-        case .prism:
-            rect = CGRect(x: size.width * 0.20, y: size.height * 0.06, width: size.width * 0.60, height: size.height * 0.86)
-            topInset = 0.10
-            bottomInset = 0.10
-            rimLift = 8
-            rimDepth = 15
-        case .tumbler:
-            rect = CGRect(x: size.width * 0.14, y: size.height * 0.07, width: size.width * 0.72, height: size.height * 0.84)
-            topInset = 0.05
-            bottomInset = 0.18
-            rimLift = 11
-            rimDepth = 18
-        case .flute:
-            rect = CGRect(x: size.width * 0.24, y: size.height * 0.04, width: size.width * 0.52, height: size.height * 0.89)
-            topInset = 0.17
-            bottomInset = 0.06
-            rimLift = 13
-            rimDepth = 20
-        }
+    init(size: CGSize) {
+        rect = CGRect(x: size.width * 0.14, y: size.height * 0.07, width: size.width * 0.72, height: size.height * 0.84)
+        topInset = 0.05
+        bottomInset = 0.18
+        rimLift = 11
+        rimDepth = 18
     }
 }
 

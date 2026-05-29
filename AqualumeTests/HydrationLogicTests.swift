@@ -16,11 +16,7 @@ private final class RecordingReminderScheduler: ReminderScheduling, @unchecked S
     var cancelledReminders = 0
     var cancelledStreakNotifications = 0
 
-    func authorizationStatus() async -> Bool { true }
     func requestAuthorization() async throws -> Bool { true }
-    func scheduleReminders(settings: UserHydrationSettings) async throws {
-        try await scheduleReminders(settings: settings, includingToday: true)
-    }
     func scheduleReminders(settings: UserHydrationSettings, includingToday: Bool) async throws {
         scheduledReminderIncludesToday.append(includingToday)
     }

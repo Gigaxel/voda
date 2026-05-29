@@ -24,7 +24,6 @@ struct AqualumeRootView: View {
                     HydrationGlassView(
                         progress: state.progress,
                         reachedGoal: state.hasReachedGoal,
-                        design: .tumbler,
                         rippleID: rippleID,
                         floatingAmount: floatingAmount.map {
                             "+" + HydrationAmountFormatter.amount($0, unitSystem: state.settings.unitSystem)
