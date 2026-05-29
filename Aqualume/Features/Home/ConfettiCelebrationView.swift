@@ -9,17 +9,26 @@ struct ConfettiCelebrationView: View {
     @State private var pieces: [ConfettiPiece] = []
 
     var body: some View {
-        TimelineView(.animation) { timeline in
+        TimelineView(.animation(minimumInterval: AqualumeAnimationBudget.confettiFrameInterval, paused: timelinePaused)) { timeline in
             Canvas { context, size in
                 drawConfetti(in: &context, size: size, date: timeline.date)
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .onChange(of: trigger) { _ in
+        .onChange(of: trigger) { _, _ in
             startedAt = Date()
-            pieces = ConfettiPiece.make(count: reduceMotion ? 46 : 180)
+            pieces = ConfettiPiece.make(count: reduceMotion ? 32 : 120)
         }
+        .onChange(of: isActive) { _, newValue in
+            if !newValue {
+                pieces = []
+            }
+        }
+    }
+
+    private var timelinePaused: Bool {
+        !isActive
     }
 
     private func drawConfetti(in context: inout GraphicsContext, size: CGSize, date: Date) {

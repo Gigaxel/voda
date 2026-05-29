@@ -1,5 +1,14 @@
 import SwiftUI
 
+enum AqualumeAnimationBudget {
+    static let waterFrameInterval: TimeInterval = 1.0 / 24.0
+    static let confettiFrameInterval: TimeInterval = 1.0 / 30.0
+
+    static let ambientBubbleCount = 6
+    static let burstBubbleCount = 16
+    static let goalBubbleCount = 24
+}
+
 struct HydrationGlassView: View {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -14,26 +23,20 @@ struct HydrationGlassView: View {
     @State private var animatedProgress = 0.0
     @State private var rippleScale = 0.35
     @State private var rippleOpacity = 0.0
+    @State private var bubbleStartedAt = Date.distantPast
+    @State private var bubbles: [WaterBubbleParticle] = []
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 goalGlow
 
-                TimelineView(.animation) { timeline in
+                TimelineView(.animation(minimumInterval: AqualumeAnimationBudget.waterFrameInterval, paused: waterTimelinePaused)) { timeline in
                     Canvas { context, size in
-                        drawGlass(in: &context, size: size, phase: timeline.date.timeIntervalSinceReferenceDate)
+                        drawGlass(in: &context, size: size, date: timeline.date)
                     }
                     .aspectRatio(0.72, contentMode: .fit)
                 }
-
-                WaterBubbleBurstView(
-                    trigger: rippleID,
-                    progress: animatedProgress,
-                    design: design,
-                    isCelebrating: reachedGoal,
-                    reduceMotion: reduceMotion
-                )
 
                 if !reduceMotion {
                     Circle()
@@ -59,6 +62,7 @@ struct HydrationGlassView: View {
         .buttonStyle(.plain)
         .onAppear {
             animatedProgress = progress
+            bubbles = WaterBubbleParticle.make(count: AqualumeAnimationBudget.ambientBubbleCount)
         }
         .onChange(of: progress) { newValue in
             withAnimation(reduceMotion ? .linear(duration: 0.1) : .spring(response: 0.86, dampingFraction: 0.84)) {
@@ -69,11 +73,17 @@ struct HydrationGlassView: View {
             guard !reduceMotion else { return }
             rippleScale = 0.35
             rippleOpacity = 0.55
+            bubbleStartedAt = Date()
+            bubbles = WaterBubbleParticle.make(count: reachedGoal ? AqualumeAnimationBudget.goalBubbleCount : AqualumeAnimationBudget.burstBubbleCount)
             withAnimation(.easeOut(duration: 0.85)) {
                 rippleScale = 1.18
                 rippleOpacity = 0
             }
         }
+    }
+
+    private var waterTimelinePaused: Bool {
+        reduceMotion || animatedProgress <= 0.02
     }
 
     private var goalGlow: some View {
@@ -94,7 +104,7 @@ struct HydrationGlassView: View {
             .animation(.easeInOut(duration: 1.4), value: reachedGoal)
     }
 
-    private func drawGlass(in context: inout GraphicsContext, size: CGSize, phase: TimeInterval) {
+    private func drawGlass(in context: inout GraphicsContext, size: CGSize, date: Date) {
         let isDark = colorScheme == .dark
         let geometry = GlassGeometry(design: design, size: size)
         let glassRect = geometry.rect
@@ -150,6 +160,7 @@ struct HydrationGlassView: View {
         )
 
         let waveAmplitude = reduceMotion ? 0 : min(10, max(3, fillRect.height * 0.035))
+        let phase = date.timeIntervalSinceReferenceDate
         let waveSpeed = reduceMotion ? 0 : phase * 2.6
         func surfaceY(_ normalizedX: CGFloat) -> CGFloat {
             let primary = sin((Double(normalizedX) * .pi * 2.0) + waveSpeed)
@@ -158,7 +169,7 @@ struct HydrationGlassView: View {
         }
 
         let waterPath = Path { path in
-            let sampleCount = 18
+            let sampleCount = 12
             path.move(to: CGPoint(x: fillRect.minX, y: surfaceY(0)))
             for sample in 1...sampleCount {
                 let normalizedX = CGFloat(sample) / CGFloat(sampleCount)
@@ -184,6 +195,16 @@ struct HydrationGlassView: View {
             )
         )
 
+        if !reduceMotion {
+            drawBubbles(
+                in: &context,
+                geometry: geometry,
+                fillHeight: fillHeight,
+                waterBottom: waterBottom,
+                date: date
+            )
+        }
+
         if reachedGoal {
             for index in 0..<7 {
                 let x = glassRect.minX + 30 + CGFloat(index) * glassRect.width / 8
@@ -192,47 +213,19 @@ struct HydrationGlassView: View {
             }
         }
     }
-}
-
-private struct WaterBubbleBurstView: View {
-    let trigger: UUID
-    let progress: Double
-    let design: HydrationGlassDesign
-    let isCelebrating: Bool
-    let reduceMotion: Bool
-
-    @State private var startedAt = Date.distantPast
-    @State private var bubbles: [WaterBubbleParticle] = []
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                drawBubbles(in: &context, size: size, date: timeline.date)
-            }
-        }
-        .allowsHitTesting(false)
-        .onAppear {
-            bubbles = WaterBubbleParticle.make(count: 10)
-        }
-        .onChange(of: trigger) { _ in
-            guard !reduceMotion else { return }
-            startedAt = Date()
-            bubbles = WaterBubbleParticle.make(count: isCelebrating ? 34 : 22)
-        }
-    }
-
-    private func drawBubbles(in context: inout GraphicsContext, size: CGSize, date: Date) {
-        guard progress > 0.02 else { return }
-
-        let geometry = GlassGeometry(design: design, size: size)
+    private func drawBubbles(
+        in context: inout GraphicsContext,
+        geometry: GlassGeometry,
+        fillHeight: CGFloat,
+        waterBottom: CGFloat,
+        date: Date
+    ) {
         let glassRect = geometry.rect
-        let fillHeight = (glassRect.height - geometry.rimDepth - 6) * progress
-        let waterBottom = glassRect.maxY - 3
         let waterTop = waterBottom - fillHeight
-        let elapsed = date.timeIntervalSince(startedAt)
+        let elapsed = date.timeIntervalSince(bubbleStartedAt)
 
         for bubble in bubbles {
-            let isAmbient = startedAt == Date.distantPast || elapsed > 1.8
+            let isAmbient = bubbleStartedAt == Date.distantPast || elapsed > 1.8
             let localTime = isAmbient
                 ? date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: bubble.duration) / bubble.duration
                 : max(0, min(1, (elapsed - bubble.delay) / bubble.duration))
