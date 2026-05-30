@@ -17,6 +17,18 @@ public protocol DailyGoalRepository: Sendable {
     func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws
 }
 
+public struct HydrationLogWriteSummary: Equatable, Sendable {
+    public var log: HydrationLog
+    public var settings: UserHydrationSettings
+    public var todayTotalML: Int
+
+    public init(log: HydrationLog, settings: UserHydrationSettings, todayTotalML: Int) {
+        self.log = log
+        self.settings = settings
+        self.todayTotalML = todayTotalML
+    }
+}
+
 public enum RepositoryLocation {
     public static let appGroupID = "group.com.gigaxel.aqualume"
 
@@ -89,6 +101,34 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
             into: database
         )
     }
+
+    public func appendLogAndLoadTodaySummary(
+        _ log: HydrationLog,
+        calendar: Calendar = .current
+    ) async throws -> HydrationLogWriteSummary {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        let settings = try SQLiteHydrationStore.loadSettings(from: database)
+        let dateKey = HydrationCalculator(calendar: calendar).dateKey(for: log.loggedAt)
+        try database.execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try SQLiteHydrationStore.saveDailyGoalSnapshot(
+                dateKey: dateKey,
+                goalML: HydrationValidation.validatedGoal(settings.dailyGoalML),
+                into: database
+            )
+            try SQLiteHydrationStore.insertLog(log, into: database)
+            let todayTotalML = try SQLiteHydrationStore.total(
+                on: log.loggedAt,
+                calendar: calendar,
+                from: database
+            )
+            try database.execute("COMMIT;")
+            return HydrationLogWriteSummary(log: log, settings: settings, todayTotalML: todayTotalML)
+        } catch {
+            try? database.execute("ROLLBACK;")
+            throw error
+        }
+    }
 }
 
 public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepository, DailyGoalRepository {
@@ -156,11 +196,15 @@ public struct HydrationSnapshot: Sendable {
 }
 
 public enum HydrationSnapshotReader {
-    public static func load(directory: URL = RepositoryLocation.sharedDirectory()) -> HydrationSnapshot {
+    public static func load(
+        directory: URL = RepositoryLocation.sharedDirectory(),
+        date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> HydrationSnapshot {
         guard let database = try? SQLiteDatabase(fileURL: SQLiteHydrationStore.fileURL(directory: directory)) else {
             return HydrationSnapshot(logs: [], settings: UserHydrationSettings())
         }
-        let logs = (try? SQLiteHydrationStore.loadLogs(from: database)) ?? []
+        let logs = (try? SQLiteHydrationStore.loadLogs(on: date, calendar: calendar, from: database)) ?? []
         let settings = (try? SQLiteHydrationStore.loadSettings(from: database)) ?? UserHydrationSettings()
         return HydrationSnapshot(logs: logs, settings: settings)
     }
@@ -347,6 +391,51 @@ private enum SQLiteHydrationStore {
         let statement = try database.prepare(sql)
         defer { sqlite3_finalize(statement) }
 
+        return try readLogs(from: statement, sql: sql, database: database)
+    }
+
+    static func loadLogs(on day: Date, calendar: Calendar = .current, from database: SQLiteDatabase) throws -> [HydrationLog] {
+        guard let interval = calendar.dateInterval(of: .day, for: day) else { return [] }
+        let sql = """
+        SELECT id, amount_ml, logged_at, source, healthkit_sample_identifier
+        FROM hydration_logs
+        WHERE logged_at >= ? AND logged_at < ?
+        ORDER BY logged_at ASC;
+        """
+        let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        try database.bind(interval.start, at: 1, in: statement)
+        try database.bind(interval.end, at: 2, in: statement)
+        return try readLogs(from: statement, sql: sql, database: database)
+    }
+
+    static func total(on day: Date, calendar: Calendar = .current, from database: SQLiteDatabase) throws -> Int {
+        guard let interval = calendar.dateInterval(of: .day, for: day) else { return 0 }
+        let sql = """
+        SELECT COALESCE(SUM(CASE WHEN amount_ml > 0 THEN amount_ml ELSE 0 END), 0)
+        FROM hydration_logs
+        WHERE logged_at >= ? AND logged_at < ?;
+        """
+        let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        try database.bind(interval.start, at: 1, in: statement)
+        try database.bind(interval.end, at: 2, in: statement)
+
+        let result = sqlite3_step(statement)
+        guard result == SQLITE_ROW else {
+            throw SQLiteHydrationStoreError.step(sql: sql, message: database.errorMessage)
+        }
+
+        return Int(sqlite3_column_int64(statement, 0))
+    }
+
+    private static func readLogs(
+        from statement: OpaquePointer?,
+        sql: String,
+        database: SQLiteDatabase
+    ) throws -> [HydrationLog] {
         var logs: [HydrationLog] = []
         var result = sqlite3_step(statement)
         while result == SQLITE_ROW {

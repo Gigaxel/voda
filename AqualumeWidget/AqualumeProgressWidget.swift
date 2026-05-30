@@ -3,6 +3,10 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+private enum AqualumeWidgetKind {
+    static let progress = "AqualumeProgressWidget"
+}
+
 struct AqualumeWidgetEntry: TimelineEntry {
     let date: Date
     let snapshot: HydrationSnapshot
@@ -26,7 +30,7 @@ struct AqualumeTimelineProvider: TimelineProvider {
 
 struct AqualumeProgressWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "AqualumeProgressWidget", provider: AqualumeTimelineProvider()) { entry in
+        StaticConfiguration(kind: AqualumeWidgetKind.progress, provider: AqualumeTimelineProvider()) { entry in
             AqualumeWidgetView(entry: entry)
         }
         .configurationDisplayName("Aqualume")
@@ -86,6 +90,7 @@ struct AqualumeWidgetView: View {
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(WidgetPalette.ink)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                 Text("of \(goalText)")
@@ -109,6 +114,7 @@ struct AqualumeWidgetView: View {
                     .font(.system(size: 32, weight: .semibold, design: .rounded))
                     .foregroundStyle(WidgetPalette.ink)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                 Text("drank today")
@@ -194,6 +200,7 @@ struct WidgetGlass: View {
                     .offset(y: -size.height * 0.83)
             }
             .accessibilityHidden(true)
+            .animation(.easeOut(duration: 0.35), value: clampedProgress)
         }
     }
 }
@@ -232,15 +239,66 @@ private struct QuickAddButton: View {
     let amountML: Int
 
     var body: some View {
-        Button(intent: QuickAddWaterIntent(amountML: amountML)) {
+        Button(intent: WidgetQuickAddWaterIntent(amountML: amountML)) {
             Image(systemName: "plus")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(WidgetPalette.ink)
-                .frame(width: 36, height: 36)
-                .background(Color.white.opacity(0.86), in: Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WidgetQuickAddButtonStyle())
         .accessibilityLabel("Add water")
+    }
+}
+
+private struct WidgetQuickAddButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        ZStack {
+            Circle()
+                .fill(configuration.isPressed ? WidgetPalette.water : Color.white.opacity(0.86))
+                .overlay {
+                    Circle()
+                        .stroke(
+                            configuration.isPressed ? Color.white.opacity(0.76) : WidgetPalette.stroke.opacity(0.18),
+                            lineWidth: 1
+                        )
+                }
+
+            configuration.label
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(configuration.isPressed ? Color.white : WidgetPalette.ink)
+                .opacity(configuration.isPressed ? 0 : 1)
+                .scaleEffect(configuration.isPressed ? 0.45 : 1)
+
+            Image(systemName: "drop.fill")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.white)
+                .opacity(configuration.isPressed ? 1 : 0)
+                .scaleEffect(configuration.isPressed ? 1 : 0.45)
+        }
+        .frame(width: 36, height: 36)
+        .shadow(color: WidgetPalette.water.opacity(configuration.isPressed ? 0.28 : 0.12), radius: 10, y: 5)
+        .scaleEffect(configuration.isPressed ? 0.86 : 1)
+        .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+struct WidgetQuickAddWaterIntent: AppIntent {
+    static let title: LocalizedStringResource = "Add Water"
+    static let description = IntentDescription("Add the default glass amount to Aqualume.")
+
+    @Parameter(title: "Amount in ml")
+    var amountML: Int
+
+    init() {
+        self.amountML = 250
+    }
+
+    init(amountML: Int) {
+        self.amountML = amountML
+    }
+
+    func perform() async throws -> some IntentResult {
+        let summary = try await QuickAddWaterPerformer.logWater(amountML: amountML)
+        WidgetCenter.shared.reloadTimelines(ofKind: AqualumeWidgetKind.progress)
+        await QuickAddWaterPerformer.refreshLiveActivities(with: summary)
+        return .result()
     }
 }
 
@@ -260,21 +318,28 @@ struct QuickAddWaterIntent: LiveActivityIntent {
     }
 
     func perform() async throws -> some IntentResult {
+        let summary = try await QuickAddWaterPerformer.logWater(amountML: amountML)
+        WidgetCenter.shared.reloadTimelines(ofKind: AqualumeWidgetKind.progress)
+        await QuickAddWaterPerformer.refreshLiveActivities(with: summary)
+        return .result()
+    }
+}
+
+private enum QuickAddWaterPerformer {
+    static func logWater(amountML: Int) async throws -> HydrationLogWriteSummary {
         let repository = SQLiteHydrationRepository()
         let amount = HydrationValidation.validatedDefaultAmount(amountML)
-        let settings = try await repository.loadSettings()
-        try await repository.saveDailyGoalSnapshot(
-            dateKey: HydrationCalculator().dateKey(for: Date()),
-            goalML: settings.dailyGoalML
+        return try await repository.appendLogAndLoadTodaySummary(
+            HydrationLog(amountML: amount, source: .widget)
         )
-        try await repository.appendLog(HydrationLog(amountML: amount, source: .widget))
-        let logs = try await repository.loadLogs()
-        let calculator = HydrationCalculator()
+    }
+
+    static func refreshLiveActivities(with summary: HydrationLogWriteSummary) async {
         let state = HydrationActivityAttributes.ContentState(
-            totalML: calculator.total(on: Date(), logs: logs),
-            goalML: settings.dailyGoalML,
-            unitSystem: settings.unitSystem,
-            defaultAmountML: settings.defaultAmountML
+            totalML: summary.todayTotalML,
+            goalML: summary.settings.dailyGoalML,
+            unitSystem: summary.settings.unitSystem,
+            defaultAmountML: summary.settings.defaultAmountML
         )
         let content = ActivityContent(state: state, staleDate: HydrationActivityAttributes.staleDate())
         let activities = Activity<HydrationActivityAttributes>.activities
@@ -290,8 +355,6 @@ struct QuickAddWaterIntent: LiveActivityIntent {
                 await activity.update(content)
             }
         }
-        WidgetCenter.shared.reloadAllTimelines()
-        return .result()
     }
 }
 
