@@ -141,6 +141,27 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(status.bestDays, 1)
     }
 
+    func testStreakFromDailyTotalsCanRemainAllTimeAccurateBeyondOneYear() {
+        let calendar = Calendar(identifier: .gregorian)
+        let calculator = HydrationCalculator(calendar: calendar)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        var dailyTotals: [String: Int] = [:]
+        for offset in 0..<400 {
+            let day = calendar.date(byAdding: .day, value: -offset, to: today)!
+            dailyTotals[calculator.dateKey(for: day)] = 2_000
+        }
+
+        let status = calculator.streakStatus(
+            endingOn: today,
+            dailyTotalsByDateKey: dailyTotals,
+            goalML: 2_000
+        )
+
+        XCTAssertEqual(status.currentDays, 400)
+        XCTAssertEqual(status.bestDays, 400)
+        XCTAssertTrue(status.achievedToday)
+    }
+
     func testUnitFormatting() {
         XCTAssertEqual(HydrationAmountFormatter.amount(250, unitSystem: .metric), "250 ml")
         XCTAssertEqual(HydrationAmountFormatter.amount(2_000, unitSystem: .metric), "2.00 L")
@@ -252,6 +273,27 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(messages.count, 10)
         XCTAssertEqual(Set(messages).count, 10)
         XCTAssertTrue(messages.allSatisfy { !$0.isEmpty && $0.count <= 70 })
+    }
+
+    @MainActor
+    func testAppStateLoadKeepsOnlyCurrentDayLogsInHomeState() async {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let todayLog = HydrationLog(amountML: 500, loggedAt: today, source: .iPhone)
+        let oldLog = HydrationLog(amountML: 2_000, loggedAt: yesterday, source: .watch)
+        let repository = InMemoryHydrationRepository(logs: [oldLog, todayLog])
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+
+        XCTAssertEqual(state.todayLogs, [todayLog])
+        XCTAssertEqual(state.todayTotalML, 500)
     }
 
     @MainActor
@@ -374,6 +416,7 @@ final class HydrationLogicTests: XCTestCase {
         await state.updateSettings { $0.dailyGoalML = 3_000 }
         await state.log(amountML: 1_500)
 
+        await state.loadHistory(days: 2)
         let summaries = state.summaries(days: 2)
         XCTAssertEqual(summaries.map(\.goalML), [1_500, 3_000])
         XCTAssertEqual(summaries.map(\.progress), [1, 0.5])

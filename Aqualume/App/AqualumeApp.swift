@@ -12,9 +12,9 @@ struct AqualumeApp: App {
         let reminders: ReminderScheduling = LocalReminderScheduler()
         let liveActivity: LiveActivityControlling = LiveActivityController()
         func refreshLiveActivity(settings: UserHydrationSettings) async {
-            let logs = (try? await repository.loadLogs()) ?? []
+            let totalML = (try? await repository.total(on: Date(), calendar: .current)) ?? 0
             await liveActivity.refresh(
-                totalML: HydrationCalculator().total(on: Date(), logs: logs),
+                totalML: totalML,
                 goalML: settings.dailyGoalML,
                 unitSystem: settings.unitSystem,
                 defaultAmountML: settings.defaultAmountML

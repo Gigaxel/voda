@@ -19,6 +19,11 @@ public final class WatchConnectivityHydrationSyncService: NSObject, HydrationSyn
     }
 
     public func activate() async {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return
+        }
+        #endif
         session?.activate()
     }
 
@@ -81,6 +86,11 @@ public final class WatchConnectivityHydrationSyncService: NSObject, HydrationSyn
     #if os(iOS)
     public func sessionDidBecomeInactive(_ session: WCSession) {}
     public func sessionDidDeactivate(_ session: WCSession) {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return
+        }
+        #endif
         session.activate()
     }
     #endif

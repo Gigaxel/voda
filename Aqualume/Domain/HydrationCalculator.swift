@@ -1,7 +1,7 @@
 import Foundation
 
 public struct HydrationCalculator: Sendable {
-    private let calendar: Calendar
+    public let calendar: Calendar
 
     public init(calendar: Calendar = .current) {
         self.calendar = calendar
@@ -59,6 +59,28 @@ public struct HydrationCalculator: Sendable {
         }
     }
 
+    public func summaries(
+        endingOn endDate: Date,
+        days: Int,
+        dailyTotalsByDateKey: [String: Int],
+        goalML: Int,
+        dailyGoalMLByDateKey: [String: Int] = [:]
+    ) -> [DailyHydrationSummary] {
+        guard days > 0 else { return [] }
+        return (0..<days).reversed().compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: endDate) else {
+                return nil
+            }
+            let dateKey = dateKey(for: date)
+            return DailyHydrationSummary(
+                dateKey: dateKey,
+                date: date,
+                totalML: max(0, dailyTotalsByDateKey[dateKey] ?? 0),
+                goalML: dailyGoalMLByDateKey[dateKey] ?? goalML
+            )
+        }
+    }
+
     public func streakStatus(
         endingOn endDate: Date,
         logs: [HydrationLog],
@@ -79,6 +101,38 @@ public struct HydrationCalculator: Sendable {
             dailyGoalMLByDateKey: dailyGoalMLByDateKey
         )
 
+        return streakStatus(from: dailySummaries, endingOn: today)
+    }
+
+    public func streakStatus(
+        endingOn endDate: Date,
+        dailyTotalsByDateKey: [String: Int],
+        goalML: Int,
+        dailyGoalMLByDateKey: [String: Int] = [:]
+    ) -> HydrationStreakStatus {
+        let today = calendar.startOfDay(for: endDate)
+        let earliestDate = dailyTotalsByDateKey.keys
+            .compactMap(date(fromDateKey:))
+            .min() ?? today
+        let dayCount = max(
+            (calendar.dateComponents([.day], from: earliestDate, to: today).day ?? 0) + 1,
+            1
+        )
+        let dailySummaries = summaries(
+            endingOn: today,
+            days: dayCount,
+            dailyTotalsByDateKey: dailyTotalsByDateKey,
+            goalML: goalML,
+            dailyGoalMLByDateKey: dailyGoalMLByDateKey
+        )
+
+        return streakStatus(from: dailySummaries, endingOn: today)
+    }
+
+    private func streakStatus(
+        from dailySummaries: [DailyHydrationSummary],
+        endingOn today: Date
+    ) -> HydrationStreakStatus {
         var bestDays = 0
         var runDays = 0
         var goalDays = 0
@@ -109,5 +163,17 @@ public struct HydrationCalculator: Sendable {
             achievedToday: achievedToday,
             dateKey: dateKey(for: today)
         )
+    }
+
+    private func date(fromDateKey dateKey: String) -> Date? {
+        let parts = dateKey.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2])
+        else {
+            return nil
+        }
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
     }
 }

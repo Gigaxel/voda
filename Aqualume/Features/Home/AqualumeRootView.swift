@@ -111,12 +111,12 @@ struct AqualumeRootView: View {
 
     private func log(amountML: Int) async {
         let hadReachedGoal = state.hasReachedGoal
-        await state.log(amountML: amountML)
-        let didReachGoal = !hadReachedGoal && state.hasReachedGoal
-
         rippleID = UUID()
         floatingAmount = amountML
         AqualumeHaptics.log()
+
+        await state.log(amountML: amountML)
+        let didReachGoal = !hadReachedGoal && state.hasReachedGoal
 
         if didReachGoal {
             triggerGoalCelebration()

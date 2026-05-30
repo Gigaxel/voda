@@ -6,13 +6,23 @@ import WidgetKit
 
 @MainActor
 public final class HydrationAppState: ObservableObject {
-    @Published public private(set) var logs: [HydrationLog] = []
+    @Published public private(set) var todayLogs: [HydrationLog] = []
     @Published public private(set) var settings: UserHydrationSettings = UserHydrationSettings()
     @Published public private(set) var latestAddedAmountML: Int?
     @Published public private(set) var statusMessage: String?
     @Published public private(set) var healthKitState: HealthKitAuthorizationState = .notDetermined
     @Published public private(set) var currentDateKey: String = HydrationCalculator().dateKey(for: Date())
     @Published public private(set) var dailyGoalSnapshots: [String: Int] = [:]
+    @Published public private(set) var historySummaries: [DailyHydrationSummary] = []
+    @Published public private(set) var isLoadingHistory = false
+    @Published public private(set) var hasLoadedHistory = false
+    @Published public private(set) var streakStatus = HydrationStreakStatus(
+        currentDays: 0,
+        bestDays: 0,
+        goalDays: 0,
+        achievedToday: false,
+        dateKey: HydrationCalculator().dateKey(for: Date())
+    )
     @Published public private(set) var hasLoaded = false
 
     private let hydrationRepository: HydrationRepository
@@ -25,6 +35,8 @@ public final class HydrationAppState: ObservableObject {
     private let calculator: HydrationCalculator
     private let now: @Sendable () -> Date
     private var lastStreakNotificationDateKey: String?
+    private var historyLoadedDays = 0
+    private var pendingOptimisticLogIDs: Set<UUID> = []
 
     public init(
         hydrationRepository: HydrationRepository,
@@ -49,10 +61,11 @@ public final class HydrationAppState: ObservableObject {
         self.calculator = calculator
         self.now = now
         self.currentDateKey = calculator.dateKey(for: now())
+        self.streakStatus = emptyStreakStatus(for: now())
     }
 
     public var todayTotalML: Int {
-        calculator.total(on: now(), logs: logs)
+        calculator.total(on: now(), logs: todayLogs)
     }
 
     public var progress: Double {
@@ -63,39 +76,34 @@ public final class HydrationAppState: ObservableObject {
         todayTotalML >= settings.dailyGoalML
     }
 
-    public var streakStatus: HydrationStreakStatus {
-        calculator.streakStatus(
-            endingOn: now(),
-            logs: logs,
-            goalML: settings.dailyGoalML,
-            dailyGoalMLByDateKey: dailyGoalSnapshotsIncludingToday
-        )
-    }
-
     public var canUndo: Bool {
-        calculator.latestLog(on: now(), logs: logs) != nil
+        guard let latest = calculator.latestLog(on: now(), logs: todayLogs) else {
+            return false
+        }
+        return !pendingOptimisticLogIDs.contains(latest.id)
     }
 
     public var quickAmountsML: [Int] {
         HydrationValidation.quickAmountsML
     }
 
-    public var sevenDaySummaries: [DailyHydrationSummary] {
-        summaries(days: 7)
-    }
-
     public func summaries(days: Int) -> [DailyHydrationSummary] {
-        calculator.summaries(
-            endingOn: now(),
-            days: days,
-            logs: logs,
-            goalML: settings.dailyGoalML,
-            dailyGoalMLByDateKey: dailyGoalSnapshotsIncludingToday
-        )
+        guard days > 0 else { return [] }
+        guard historySummaries.count > days else { return historySummaries }
+        return Array(historySummaries.suffix(days))
     }
 
     public func refreshForCurrentDate() {
-        currentDateKey = calculator.dateKey(for: now())
+        let nextDateKey = calculator.dateKey(for: now())
+        guard currentDateKey != nextDateKey else { return }
+        currentDateKey = nextDateKey
+        todayLogs = []
+        latestAddedAmountML = nil
+        historySummaries = []
+        hasLoadedHistory = false
+        historyLoadedDays = 0
+        pendingOptimisticLogIDs = []
+        streakStatus = emptyStreakStatus(for: now())
     }
 
     public func refreshLiveActivity() async {
@@ -110,9 +118,13 @@ public final class HydrationAppState: ObservableObject {
     public func load() async {
         do {
             refreshForCurrentDate()
-            logs = try await hydrationRepository.loadLogs()
+            let loadedTodayLogs = try await hydrationRepository.loadLogs(on: now(), calendar: calculator.calendar)
+            mergeTodayLogsWithPending(loadedTodayLogs)
             settings = try await settingsRepository.loadSettings()
-            dailyGoalSnapshots = (try await dailyGoalRepository?.loadDailyGoalSnapshots()) ?? [:]
+            dailyGoalSnapshots = (try await dailyGoalRepository?.loadDailyGoalSnapshots(
+                from: currentDateKey,
+                through: currentDateKey
+            )) ?? [:]
             try await saveCurrentGoalSnapshotIfNeeded()
             healthKitState = await healthKit.authorizationState()
             await sync.activate()
@@ -135,6 +147,9 @@ public final class HydrationAppState: ObservableObject {
         let safeAmount = HydrationValidation.validatedDefaultAmount(amountML)
         let hadReachedGoal = hasReachedGoal
         var log = HydrationLog(amountML: safeAmount, loggedAt: now(), source: source)
+        todayLogs.append(log)
+        pendingOptimisticLogIDs.insert(log.id)
+        latestAddedAmountML = safeAmount
 
         do {
             try await saveCurrentGoalSnapshotIfNeeded()
@@ -148,8 +163,9 @@ public final class HydrationAppState: ObservableObject {
                     statusMessage = "Saved locally. Health write unavailable."
                 }
             }
-            logs = try await hydrationRepository.loadLogs()
-            latestAddedAmountML = safeAmount
+            pendingOptimisticLogIDs.remove(log.id)
+            let loadedTodayLogs = try await hydrationRepository.loadLogs(on: now(), calendar: calculator.calendar)
+            mergeTodayLogsWithPending(loadedTodayLogs)
             await sync.sendLog(log)
             if !hadReachedGoal && hasReachedGoal {
                 await notifyStreakGoalReachedIfNeeded()
@@ -158,31 +174,44 @@ public final class HydrationAppState: ObservableObject {
                 await refreshHydrationReminders()
             }
             await refreshStreakReminder()
+            await refreshLoadedHistoryIfNeeded()
             reloadWidgets()
             await refreshLiveActivity()
         } catch {
+            pendingOptimisticLogIDs.remove(log.id)
+            todayLogs.removeAll { $0.id == log.id }
+            latestAddedAmountML = nil
             statusMessage = "Unable to save water."
         }
     }
 
     public func undoLatest() async {
         refreshForCurrentDate()
-        guard let latest = calculator.latestLog(on: now(), logs: logs) else { return }
+        guard let latest = calculator.latestLog(on: now(), logs: todayLogs),
+              !pendingOptimisticLogIDs.contains(latest.id)
+        else {
+            return
+        }
         let hadReachedGoal = hasReachedGoal
+        todayLogs.removeAll { $0.id == latest.id }
+        latestAddedAmountML = nil
         do {
             try await hydrationRepository.removeLog(id: latest.id)
             if let identifier = latest.healthKitSampleIdentifier {
                 try? await healthKit.deleteWaterSample(identifier: identifier)
             }
-            logs = try await hydrationRepository.loadLogs()
-            latestAddedAmountML = nil
+            let loadedTodayLogs = try await hydrationRepository.loadLogs(on: now(), calendar: calculator.calendar)
+            mergeTodayLogsWithPending(loadedTodayLogs)
             if hadReachedGoal != hasReachedGoal {
                 await refreshHydrationReminders()
             }
             await refreshStreakReminder()
+            await refreshLoadedHistoryIfNeeded()
             reloadWidgets()
             await refreshLiveActivity()
         } catch {
+            todayLogs.append(latest)
+            todayLogs.sort { $0.loggedAt < $1.loggedAt }
             statusMessage = "Unable to undo latest log."
         }
     }
@@ -205,6 +234,7 @@ public final class HydrationAppState: ObservableObject {
             try await saveCurrentGoalSnapshotIfNeeded()
             await refreshHydrationReminders()
             await refreshStreakReminder()
+            await refreshLoadedHistoryIfNeeded()
             await sync.sendSettings(settings)
             reloadWidgets()
             await refreshLiveActivity()
@@ -224,6 +254,58 @@ public final class HydrationAppState: ObservableObject {
         }
     }
 
+    public func loadHistory(days: Int = 365, force: Bool = false) async {
+        guard days > 0 else { return }
+        guard force || !hasLoadedHistory || days > historyLoadedDays else { return }
+        guard !isLoadingHistory else { return }
+
+        isLoadingHistory = true
+        defer { isLoadingHistory = false }
+
+        do {
+            refreshForCurrentDate()
+            let endDate = now()
+            let startDate = calculator.calendar.date(byAdding: .day, value: -(days - 1), to: endDate) ?? endDate
+            let startDateKey = calculator.dateKey(for: startDate)
+            let endDateKey = calculator.dateKey(for: endDate)
+            let dailyTotals = try await hydrationRepository.loadDailyTotals(
+                from: startDate,
+                through: endDate,
+                calendar: calculator.calendar
+            )
+            let snapshots = (try await dailyGoalRepository?.loadDailyGoalSnapshots(
+                from: startDateKey,
+                through: endDateKey
+            )) ?? [:]
+            mergeDailyGoalSnapshots(snapshots)
+
+            historySummaries = calculator.summaries(
+                endingOn: endDate,
+                days: days,
+                dailyTotalsByDateKey: dailyTotals,
+                goalML: settings.dailyGoalML,
+                dailyGoalMLByDateKey: snapshotsIncludingToday(snapshots)
+            )
+            historyLoadedDays = days
+            hasLoadedHistory = true
+            do {
+                try await refreshStreakStatus()
+            } catch {
+                statusMessage = "Unable to load streak."
+            }
+        } catch {
+            statusMessage = "Unable to load history."
+        }
+    }
+
+    public func loadStreakStatus() async {
+        do {
+            try await refreshStreakStatus()
+        } catch {
+            statusMessage = "Unable to load streak."
+        }
+    }
+
     public func replayOnboardingForDevelopment() async {
         await updateSettings { settings in
             settings.hasCompletedOnboarding = false
@@ -236,18 +318,75 @@ public final class HydrationAppState: ObservableObject {
         #endif
     }
 
-    private var dailyGoalSnapshotsIncludingToday: [String: Int] {
-        var snapshots = dailyGoalSnapshots
-        snapshots[calculator.dateKey(for: now())] = settings.dailyGoalML
-        return snapshots
-    }
-
     private func saveCurrentGoalSnapshotIfNeeded() async throws {
         let dateKey = calculator.dateKey(for: now())
         let goalML = settings.dailyGoalML
         guard dailyGoalSnapshots[dateKey] != goalML else { return }
         try await dailyGoalRepository?.saveDailyGoalSnapshot(dateKey: dateKey, goalML: goalML)
         dailyGoalSnapshots[dateKey] = goalML
+    }
+
+    private func snapshotsIncludingToday(_ snapshots: [String: Int]) -> [String: Int] {
+        var snapshots = snapshots
+        snapshots[calculator.dateKey(for: now())] = settings.dailyGoalML
+        return snapshots
+    }
+
+    private func mergeDailyGoalSnapshots(_ snapshots: [String: Int]) {
+        for (dateKey, goalML) in snapshots {
+            dailyGoalSnapshots[dateKey] = goalML
+        }
+    }
+
+    private func mergeTodayLogsWithPending(_ loadedTodayLogs: [HydrationLog]) {
+        guard !pendingOptimisticLogIDs.isEmpty else {
+            todayLogs = loadedTodayLogs
+            return
+        }
+
+        let loadedIDs = Set(loadedTodayLogs.map(\.id))
+        let pendingLogs = todayLogs.filter { log in
+            pendingOptimisticLogIDs.contains(log.id)
+                && !loadedIDs.contains(log.id)
+                && calculator.isSameDay(log.loggedAt, now())
+        }
+        todayLogs = (loadedTodayLogs + pendingLogs).sorted { $0.loggedAt < $1.loggedAt }
+    }
+
+    private func refreshLoadedHistoryIfNeeded() async {
+        guard hasLoadedHistory else { return }
+        await loadHistory(days: historyLoadedDays > 0 ? historyLoadedDays : 365, force: true)
+    }
+
+    private func refreshStreakStatus() async throws {
+        let endDate = now()
+        let endDateKey = calculator.dateKey(for: endDate)
+        let dailyTotals = try await hydrationRepository.loadDailyTotals(
+            from: nil,
+            through: endDate,
+            calendar: calculator.calendar
+        )
+        let snapshots = (try await dailyGoalRepository?.loadDailyGoalSnapshots(
+            from: nil,
+            through: endDateKey
+        )) ?? [:]
+        mergeDailyGoalSnapshots(snapshots)
+        streakStatus = calculator.streakStatus(
+            endingOn: endDate,
+            dailyTotalsByDateKey: dailyTotals,
+            goalML: settings.dailyGoalML,
+            dailyGoalMLByDateKey: snapshotsIncludingToday(snapshots)
+        )
+    }
+
+    private func emptyStreakStatus(for date: Date) -> HydrationStreakStatus {
+        HydrationStreakStatus(
+            currentDays: 0,
+            bestDays: 0,
+            goalDays: 0,
+            achievedToday: false,
+            dateKey: calculator.dateKey(for: date)
+        )
     }
 
     private func refreshHydrationReminders() async {
@@ -265,6 +404,7 @@ public final class HydrationAppState: ObservableObject {
     private func refreshStreakReminder() async {
         do {
             if settings.streakNotificationsEnabled {
+                try await refreshStreakStatus()
                 try await reminders.scheduleStreakReminder(settings: settings, status: streakStatus, date: now())
             } else {
                 await reminders.cancelStreakNotifications()
@@ -275,9 +415,11 @@ public final class HydrationAppState: ObservableObject {
     }
 
     private func notifyStreakGoalReachedIfNeeded() async {
-        let status = streakStatus
-        guard lastStreakNotificationDateKey != status.dateKey else { return }
+        guard settings.streakNotificationsEnabled else { return }
         do {
+            try await refreshStreakStatus()
+            let status = streakStatus
+            guard lastStreakNotificationDateKey != status.dateKey else { return }
             try await reminders.notifyStreakGoalReached(settings: settings, status: status)
             lastStreakNotificationDateKey = status.dateKey
         } catch {

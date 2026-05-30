@@ -19,49 +19,59 @@ struct HistoryView: View {
                 .pickerStyle(.segmented)
             }
 
-            Section("Trend") {
-                HydrationTrendChart(
-                    summaries: summaries,
-                    unitSystem: state.settings.unitSystem
-                )
-                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
-            }
-
-            Section {
-                HistoryStatsGrid(
-                    summaries: summaries,
-                    streakStatus: state.streakStatus,
-                    unitSystem: state.settings.unitSystem
-                )
-            }
-
-            Section {
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal) {
-                        HistoryCalendarHeatmap(
-                            summaries: summaries,
-                            unitSystem: state.settings.unitSystem
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                    .scrollIndicators(.hidden)
-                    .onAppear {
-                        scrollToToday(proxy)
-                    }
-                    .onChange(of: selectedRange) { _, _ in
-                        scrollToToday(proxy)
-                    }
+            if !state.hasLoadedHistory && summaries.isEmpty {
+                Section {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 120)
                 }
-                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
-            }
+            } else {
+                Section("Trend") {
+                    HydrationTrendChart(
+                        summaries: summaries,
+                        unitSystem: state.settings.unitSystem
+                    )
+                    .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                }
 
-            Section("Daily Totals") {
-                ForEach(summaries.reversed()) { summary in
-                    HistorySummaryRow(summary: summary, unitSystem: state.settings.unitSystem)
+                Section {
+                    HistoryStatsGrid(
+                        summaries: summaries,
+                        streakStatus: state.streakStatus,
+                        unitSystem: state.settings.unitSystem
+                    )
+                }
+
+                Section {
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal) {
+                            HistoryCalendarHeatmap(
+                                summaries: summaries,
+                                unitSystem: state.settings.unitSystem
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .scrollIndicators(.hidden)
+                        .onAppear {
+                            scrollToToday(proxy)
+                        }
+                        .onChange(of: selectedRange) { _, _ in
+                            scrollToToday(proxy)
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                }
+
+                Section("Daily Totals") {
+                    ForEach(summaries.reversed()) { summary in
+                        HistorySummaryRow(summary: summary, unitSystem: state.settings.unitSystem)
+                    }
                 }
             }
         }
         .navigationTitle("History")
+        .task(id: state.currentDateKey) {
+            await state.loadHistory(days: HistoryRange.oneYear.days)
+        }
     }
 
     private func scrollToToday(_ proxy: ScrollViewProxy) {

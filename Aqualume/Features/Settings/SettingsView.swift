@@ -93,6 +93,9 @@ struct SettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task {
+                await state.loadStreakStatus()
+            }
         }
     }
 

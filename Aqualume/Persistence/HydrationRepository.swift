@@ -3,6 +3,9 @@ import SQLite3
 
 public protocol HydrationRepository: Sendable {
     func loadLogs() async throws -> [HydrationLog]
+    func loadLogs(on day: Date, calendar: Calendar) async throws -> [HydrationLog]
+    func total(on day: Date, calendar: Calendar) async throws -> Int
+    func loadDailyTotals(from startDay: Date?, through endDay: Date, calendar: Calendar) async throws -> [String: Int]
     func appendLog(_ log: HydrationLog) async throws
     func removeLog(id: UUID) async throws
 }
@@ -14,6 +17,7 @@ public protocol SettingsRepository: Sendable {
 
 public protocol DailyGoalRepository: Sendable {
     func loadDailyGoalSnapshots() async throws -> [String: Int]
+    func loadDailyGoalSnapshots(from startDateKey: String?, through endDateKey: String) async throws -> [String: Int]
     func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws
 }
 
@@ -55,6 +59,30 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
         return try SQLiteHydrationStore.loadLogs(from: database)
     }
 
+    public func loadLogs(on day: Date, calendar: Calendar = .current) async throws -> [HydrationLog] {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        return try SQLiteHydrationStore.loadLogs(on: day, calendar: calendar, from: database)
+    }
+
+    public func total(on day: Date, calendar: Calendar = .current) async throws -> Int {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        return try SQLiteHydrationStore.total(on: day, calendar: calendar, from: database)
+    }
+
+    public func loadDailyTotals(
+        from startDay: Date? = nil,
+        through endDay: Date = Date(),
+        calendar: Calendar = .current
+    ) async throws -> [String: Int] {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        return try SQLiteHydrationStore.loadDailyTotals(
+            from: startDay,
+            through: endDay,
+            calendar: calendar,
+            database: database
+        )
+    }
+
     public func appendLog(_ log: HydrationLog) async throws {
         let database = try SQLiteDatabase(fileURL: fileURL)
         try SQLiteHydrationStore.insertLog(log, into: database)
@@ -91,6 +119,18 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
     public func loadDailyGoalSnapshots() async throws -> [String: Int] {
         let database = try SQLiteDatabase(fileURL: fileURL)
         return try SQLiteHydrationStore.loadDailyGoalSnapshots(from: database)
+    }
+
+    public func loadDailyGoalSnapshots(
+        from startDateKey: String? = nil,
+        through endDateKey: String
+    ) async throws -> [String: Int] {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        return try SQLiteHydrationStore.loadDailyGoalSnapshots(
+            from: startDateKey,
+            through: endDateKey,
+            database: database
+        )
     }
 
     public func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws {
@@ -150,6 +190,39 @@ public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepositor
         logs
     }
 
+    public func loadLogs(on day: Date, calendar: Calendar = .current) async throws -> [HydrationLog] {
+        logs
+            .filter { calendar.isDate($0.loggedAt, inSameDayAs: day) }
+            .sorted { $0.loggedAt < $1.loggedAt }
+    }
+
+    public func total(on day: Date, calendar: Calendar = .current) async throws -> Int {
+        logs
+            .filter { calendar.isDate($0.loggedAt, inSameDayAs: day) }
+            .reduce(0) { $0 + max(0, $1.amountML) }
+    }
+
+    public func loadDailyTotals(
+        from startDay: Date? = nil,
+        through endDay: Date = Date(),
+        calendar: Calendar = .current
+    ) async throws -> [String: Int] {
+        let calculator = HydrationCalculator(calendar: calendar)
+        let endInterval = calendar.dateInterval(of: .day, for: endDay)
+        let start = startDay.flatMap { calendar.dateInterval(of: .day, for: $0)?.start }
+        let end = endInterval?.end ?? endDay.addingTimeInterval(1)
+
+        var totals: [String: Int] = [:]
+        for log in logs where log.loggedAt < end {
+            if let start, log.loggedAt < start {
+                continue
+            }
+            let dateKey = calculator.dateKey(for: log.loggedAt)
+            totals[dateKey, default: 0] += max(0, log.amountML)
+        }
+        return totals
+    }
+
     public func appendLog(_ log: HydrationLog) async throws {
         guard !logs.contains(where: { $0.id == log.id }) else { return }
         logs.append(log)
@@ -175,6 +248,17 @@ public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepositor
 
     public func loadDailyGoalSnapshots() async throws -> [String: Int] {
         dailyGoalSnapshots
+    }
+
+    public func loadDailyGoalSnapshots(
+        from startDateKey: String? = nil,
+        through endDateKey: String
+    ) async throws -> [String: Int] {
+        dailyGoalSnapshots.filter { dateKey, _ in
+            guard dateKey <= endDateKey else { return false }
+            guard let startDateKey else { return true }
+            return dateKey >= startDateKey
+        }
     }
 
     public func saveDailyGoalSnapshot(dateKey: String, goalML: Int) async throws {
@@ -431,6 +515,55 @@ private enum SQLiteHydrationStore {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
+    static func loadDailyTotals(
+        from startDay: Date?,
+        through endDay: Date,
+        calendar: Calendar = .current,
+        database: SQLiteDatabase
+    ) throws -> [String: Int] {
+        guard let endInterval = calendar.dateInterval(of: .day, for: endDay) else { return [:] }
+        let calculator = HydrationCalculator(calendar: calendar)
+        let sql: String
+        let statement: OpaquePointer?
+        if let startDay, let startInterval = calendar.dateInterval(of: .day, for: startDay) {
+            sql = """
+            SELECT logged_at, amount_ml
+            FROM hydration_logs
+            WHERE logged_at >= ? AND logged_at < ?
+            ORDER BY logged_at ASC;
+            """
+            statement = try database.prepare(sql)
+            try database.bind(startInterval.start, at: 1, in: statement)
+            try database.bind(endInterval.end, at: 2, in: statement)
+        } else {
+            sql = """
+            SELECT logged_at, amount_ml
+            FROM hydration_logs
+            WHERE logged_at < ?
+            ORDER BY logged_at ASC;
+            """
+            statement = try database.prepare(sql)
+            try database.bind(endInterval.end, at: 1, in: statement)
+        }
+        defer { sqlite3_finalize(statement) }
+
+        var totals: [String: Int] = [:]
+        var result = sqlite3_step(statement)
+        while result == SQLITE_ROW {
+            let loggedAt = Date(timeIntervalSince1970: sqlite3_column_double(statement, 0))
+            let amountML = Int(sqlite3_column_int64(statement, 1))
+            let dateKey = calculator.dateKey(for: loggedAt)
+            totals[dateKey, default: 0] += max(0, amountML)
+            result = sqlite3_step(statement)
+        }
+
+        guard result == SQLITE_DONE else {
+            throw SQLiteHydrationStoreError.step(sql: sql, message: database.errorMessage)
+        }
+
+        return totals
+    }
+
     private static func readLogs(
         from statement: OpaquePointer?,
         sql: String,
@@ -619,6 +752,49 @@ private enum SQLiteHydrationStore {
         FROM daily_goal_snapshots;
         """
         let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        var snapshots: [String: Int] = [:]
+        var result = sqlite3_step(statement)
+        while result == SQLITE_ROW {
+            if let dateKey = columnString(statement, 0) {
+                snapshots[dateKey] = Int(sqlite3_column_int64(statement, 1))
+            }
+            result = sqlite3_step(statement)
+        }
+
+        guard result == SQLITE_DONE else {
+            throw SQLiteHydrationStoreError.step(sql: sql, message: database.errorMessage)
+        }
+
+        return snapshots
+    }
+
+    static func loadDailyGoalSnapshots(
+        from startDateKey: String?,
+        through endDateKey: String,
+        database: SQLiteDatabase
+    ) throws -> [String: Int] {
+        let sql: String
+        let statement: OpaquePointer?
+        if let startDateKey {
+            sql = """
+            SELECT date_key, goal_ml
+            FROM daily_goal_snapshots
+            WHERE date_key >= ? AND date_key <= ?;
+            """
+            statement = try database.prepare(sql)
+            try database.bind(startDateKey, at: 1, in: statement)
+            try database.bind(endDateKey, at: 2, in: statement)
+        } else {
+            sql = """
+            SELECT date_key, goal_ml
+            FROM daily_goal_snapshots
+            WHERE date_key <= ?;
+            """
+            statement = try database.prepare(sql)
+            try database.bind(endDateKey, at: 1, in: statement)
+        }
         defer { sqlite3_finalize(statement) }
 
         var snapshots: [String: Int] = [:]

@@ -139,6 +139,76 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(snapshots["2026-05-30"], 1_800)
     }
 
+    func testSQLiteRepositoryLoadsLogsAndTotalForOneDay() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let repository = SQLiteHydrationRepository(directory: directory)
+        let today = DateComponents(calendar: calendar, year: 2026, month: 5, day: 30, hour: 9).date!
+        let todayLater = DateComponents(calendar: calendar, year: 2026, month: 5, day: 30, hour: 15).date!
+        let yesterday = DateComponents(calendar: calendar, year: 2026, month: 5, day: 29, hour: 23).date!
+        let todayLog = HydrationLog(amountML: 250, loggedAt: today, source: .iPhone)
+        let laterLog = HydrationLog(amountML: 330, loggedAt: todayLater, source: .widget)
+        let olderLog = HydrationLog(amountML: 500, loggedAt: yesterday, source: .watch)
+
+        try await repository.appendLog(olderLog)
+        try await repository.appendLog(laterLog)
+        try await repository.appendLog(todayLog)
+
+        let logs = try await repository.loadLogs(on: today, calendar: calendar)
+        let total = try await repository.total(on: today, calendar: calendar)
+
+        XCTAssertEqual(logs, [todayLog, laterLog])
+        XCTAssertEqual(total, 580)
+    }
+
+    func testSQLiteRepositoryLoadsDailyTotalsForDateRange() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let repository = SQLiteHydrationRepository(directory: directory)
+        let start = DateComponents(calendar: calendar, year: 2026, month: 5, day: 29, hour: 10).date!
+        let end = DateComponents(calendar: calendar, year: 2026, month: 5, day: 30, hour: 10).date!
+        let beforeRange = DateComponents(calendar: calendar, year: 2026, month: 5, day: 28, hour: 10).date!
+        let afterRange = DateComponents(calendar: calendar, year: 2026, month: 5, day: 31, hour: 10).date!
+
+        try await repository.appendLog(HydrationLog(amountML: 1_000, loggedAt: beforeRange, source: .iPhone))
+        try await repository.appendLog(HydrationLog(amountML: 200, loggedAt: start, source: .iPhone))
+        try await repository.appendLog(HydrationLog(amountML: 300, loggedAt: start.addingTimeInterval(60), source: .watch))
+        try await repository.appendLog(HydrationLog(amountML: 400, loggedAt: end, source: .widget))
+        try await repository.appendLog(HydrationLog(amountML: 1_000, loggedAt: afterRange, source: .iPhone))
+
+        let totals = try await repository.loadDailyTotals(from: start, through: end, calendar: calendar)
+
+        XCTAssertEqual(totals["2026-05-28"], nil)
+        XCTAssertEqual(totals["2026-05-29"], 500)
+        XCTAssertEqual(totals["2026-05-30"], 400)
+        XCTAssertEqual(totals["2026-05-31"], nil)
+    }
+
+    func testSQLiteRepositoryLoadsBoundedDailyGoalSnapshots() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let repository = SQLiteHydrationRepository(directory: directory)
+
+        try await repository.saveDailyGoalSnapshot(dateKey: "2026-05-28", goalML: 1_500)
+        try await repository.saveDailyGoalSnapshot(dateKey: "2026-05-29", goalML: 1_800)
+        try await repository.saveDailyGoalSnapshot(dateKey: "2026-05-30", goalML: 2_000)
+        try await repository.saveDailyGoalSnapshot(dateKey: "2026-05-31", goalML: 2_200)
+
+        let snapshots = try await repository.loadDailyGoalSnapshots(
+            from: "2026-05-29",
+            through: "2026-05-30"
+        )
+
+        XCTAssertEqual(snapshots, [
+            "2026-05-29": 1_800,
+            "2026-05-30": 2_000
+        ])
+    }
+
     func testSQLiteSnapshotReaderLoadsDatabaseStore() async throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
