@@ -3,20 +3,21 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var state: HydrationAppState
     @Environment(\.dismiss) private var dismiss
+    @State private var pendingUnitSystem: HydrationUnitSystem?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Hydration") {
                     Stepper(
-                        "Daily goal: \(HydrationAmountFormatter.amount(state.settings.dailyGoalML, unitSystem: state.settings.unitSystem))",
+                        "Daily goal: \(HydrationAmountFormatter.amount(state.settings.dailyGoalML, unitSystem: displayedUnitSystem))",
                         value: goalBinding,
                         in: HydrationValidation.minimumGoalML...HydrationValidation.maximumGoalML,
                         step: 50
                     )
 
                     Stepper(
-                        "Default add: \(HydrationAmountFormatter.amount(state.settings.defaultAmountML, unitSystem: state.settings.unitSystem))",
+                        "Default add: \(HydrationAmountFormatter.amount(state.settings.defaultAmountML, unitSystem: displayedUnitSystem))",
                         value: defaultAmountBinding,
                         in: HydrationValidation.minimumDefaultAmountML...HydrationValidation.maximumDefaultAmountML,
                         step: 25
@@ -62,8 +63,12 @@ struct SettingsView: View {
                         Text(healthLabel)
                             .foregroundStyle(.secondary)
                     }
-                    Button("Enable Dietary Water Writes") {
+                    Button {
                         Task { await state.requestHealthKitAuthorization() }
+                    } label: {
+                        Label("Enable Dietary Water Writes", systemImage: "heart.text.square")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                 }
 
@@ -108,6 +113,10 @@ struct SettingsView: View {
         #endif
     }
 
+    private var displayedUnitSystem: HydrationUnitSystem {
+        pendingUnitSystem ?? state.settings.unitSystem
+    }
+
     private var goalBinding: Binding<Int> {
         Binding(
             get: { state.settings.dailyGoalML },
@@ -124,8 +133,16 @@ struct SettingsView: View {
 
     private var unitBinding: Binding<HydrationUnitSystem> {
         Binding(
-            get: { state.settings.unitSystem },
-            set: { value in Task { await state.updateSettings { $0.unitSystem = value } } }
+            get: { displayedUnitSystem },
+            set: { value in
+                pendingUnitSystem = value
+                Task { @MainActor in
+                    await state.updateSettings { $0.unitSystem = value }
+                    if pendingUnitSystem == value {
+                        pendingUnitSystem = nil
+                    }
+                }
+            }
         )
     }
 
