@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct AqualumeRootView: View {
     @EnvironmentObject private var state: HydrationAppState
@@ -169,123 +170,196 @@ private enum OnboardingWeightUnit: String, CaseIterable, Identifiable {
 
 private struct OnboardingView: View {
     @EnvironmentObject private var state: HydrationAppState
+
     @State private var gender: HydrationProfileGender = .preferNotToSay
     @State private var weightUnit: OnboardingWeightUnit = .kilograms
     @State private var weightValue = 70.0
     @State private var hasInitialized = false
+    @State private var step: Step = .profile
+    @State private var slideFromRight = true
+
+    private enum Step: CaseIterable, Equatable, Hashable {
+        case profile, healthKit, reminders, streakNotifications, liveActivity, done
+    }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AqualumeBackground()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("A good first goal starts with a quick body-weight estimate.")
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 20)
-                        .padding(.trailing, 12)
-
-                    Form {
-                        Section("Profile") {
-                            Picker("Gender", selection: $gender) {
-                                ForEach(HydrationProfileGender.allCases, id: \.self) { option in
-                                    Text(option.displayName).tag(option)
-                                }
+        ZStack {
+            AqualumeBackground()
+            VStack(spacing: 0) {
+                if step != .done {
+                    HStack {
+                        if step != .profile {
+                            Button { goBack() } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(.title3, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 44, height: 44)
                             }
-
-                            Picker("Weight unit", selection: $weightUnit) {
-                                ForEach(OnboardingWeightUnit.allCases) { unit in
-                                    Text(unit.title).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .onChange(of: weightUnit) { oldValue, newValue in
-                                convertWeight(from: oldValue, to: newValue)
-                            }
-
-                            LabeledContent("Weight") {
-                                HStack(spacing: 8) {
-                                    TextField("Weight", value: weightBinding, format: .number.precision(.fractionLength(0)))
-                                        .keyboardType(.decimalPad)
-                                        .multilineTextAlignment(.trailing)
-                                        .frame(minWidth: 72)
-                                    Text(weightUnit.title)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Slider(value: weightBinding, in: weightRange, step: weightStep)
-                                .accessibilityLabel("Weight")
-                                .accessibilityValue(weightText)
+                        } else {
+                            Spacer().frame(width: 44)
                         }
-
-                        Section("Recommended Daily Goal") {
-                            LabeledContent("Starting goal", value: recommendationText)
-                            Text("You can tune the daily goal later in Settings.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        Spacer()
+                        HStack(spacing: 6) {
+                            ForEach(Step.allCases.filter { $0 != .done }, id: \.self) { s in
+                                let active = s == step
+                                Circle()
+                                    .fill(active
+                                        ? Color(red: 0.05, green: 0.58, blue: 0.48)
+                                        : Color.secondary.opacity(0.3))
+                                    .frame(width: active ? 8 : 6, height: active ? 8 : 6)
+                                    .animation(.easeInOut(duration: 0.2), value: step)
+                            }
                         }
+                        Spacer()
+                        Spacer().frame(width: 44)
                     }
-                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 16)
+                    .padding(.bottom, 4)
                 }
+                stepView
+                    .id(step)
+                    .transition(
+                        slideFromRight
+                        ? .asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity))
+                        : .asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity))
+                    )
             }
-            .navigationTitle("Set Your Goal")
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    Task { await completeOnboarding() }
-                } label: {
-                    Text("Start with \(recommendationText)")
-                        .font(.system(.headline, design: .rounded, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .onAppear(perform: initializeDefaults)
+    }
+
+    @ViewBuilder
+    private var stepView: some View {
+        switch step {
+        case .profile:
+            ProfileStepView(
+                gender: $gender,
+                weightUnit: $weightUnit,
+                weightValue: $weightValue,
+                recommendationText: recommendationText,
+                onContinue: advance
+            )
+        case .healthKit:
+            OnboardingPermissionStepView(
+                symbol: "heart.text.square.fill",
+                symbolColor: .pink,
+                title: "Sync with Apple Health",
+                bodyText: "Every sip you log gets written to Apple Health automatically, so your hydration data lives alongside all your other health trends.",
+                primaryLabel: "Connect Health",
+                skipLabel: "Not Now",
+                onAllow: {
+                    await state.requestHealthKitAuthorization()
+                    advance()
+                },
+                onSkip: {
+                    await state.updateSettings { $0.healthKitEnabled = false }
+                    advance()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.05, green: 0.58, blue: 0.48))
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-                .background(.ultraThinMaterial)
+            )
+        case .reminders:
+            OnboardingPermissionStepView(
+                symbol: "bell.badge.fill",
+                symbolColor: Color(red: 0.05, green: 0.58, blue: 0.48),
+                title: "Gentle Reminders",
+                bodyText: "Aqualume can nudge you throughout the day so staying hydrated becomes effortless. Configure the schedule in Settings whenever you like.",
+                primaryLabel: "Allow Notifications",
+                skipLabel: "Not Now",
+                onAllow: {
+                    let granted = (try? await UNUserNotificationCenter.current()
+                        .requestAuthorization(options: [.alert, .sound])) ?? false
+                    if granted {
+                        await state.updateSettings { $0.remindersEnabled = true }
+                    }
+                    advance()
+                },
+                onSkip: {
+                    await state.updateSettings { $0.remindersEnabled = false }
+                    advance()
+                }
+            )
+        case .streakNotifications:
+            OnboardingPermissionStepView(
+                symbol: "flame.fill",
+                symbolColor: .orange,
+                title: "Keep Your Streak",
+                bodyText: "Get a heads-up each evening if you haven't hit your goal yet, and a celebration when you reach a streak milestone.",
+                primaryLabel: "Enable Streak Alerts",
+                skipLabel: "Not Now",
+                onAllow: {
+                    let granted = (try? await UNUserNotificationCenter.current()
+                        .requestAuthorization(options: [.alert, .sound])) ?? false
+                    if granted {
+                        await state.updateSettings { $0.streakNotificationsEnabled = true }
+                    }
+                    advance()
+                },
+                onSkip: {
+                    await state.updateSettings { $0.streakNotificationsEnabled = false }
+                    advance()
+                }
+            )
+        case .liveActivity:
+            OnboardingPermissionStepView(
+                symbol: "waveform",
+                symbolColor: Color(red: 0.05, green: 0.58, blue: 0.48),
+                title: "Live Progress",
+                bodyText: "Watch your hydration fill up on the Lock Screen and in the Dynamic Island — no need to open the app.",
+                primaryLabel: "Enable Live Activity",
+                skipLabel: "Not Now",
+                onAllow: {
+                    LiveActivityPreference.setEnabled(true)
+                    await state.refreshLiveActivity()
+                    advance()
+                },
+                onSkip: {
+                    LiveActivityPreference.setEnabled(false)
+                    advance()
+                }
+            )
+        case .done:
+            DoneStepView {
+                await completeOnboarding()
             }
-            .onAppear(perform: initializeDefaults)
         }
     }
 
-    private var weightRange: ClosedRange<Double> {
-        switch weightUnit {
-        case .kilograms:
-            return HydrationValidation.minimumProfileWeightKG...HydrationValidation.maximumProfileWeightKG
-        case .pounds:
-            let minimum = HydrationGoalRecommender.pounds(
-                fromKilograms: HydrationValidation.minimumProfileWeightKG
-            )
-            let maximum = HydrationGoalRecommender.pounds(
-                fromKilograms: HydrationValidation.maximumProfileWeightKG
-            )
-            return minimum...maximum
+    private func advance() {
+        slideFromRight = true
+        withAnimation(.easeInOut(duration: 0.3)) {
+            switch step {
+            case .profile: step = .healthKit
+            case .healthKit: step = .reminders
+            case .reminders: step = .streakNotifications
+            case .streakNotifications: step = .liveActivity
+            case .liveActivity: step = .done
+            case .done: break
+            }
         }
     }
 
-    private var weightStep: Double {
-        switch weightUnit {
-        case .kilograms: 1
-        case .pounds: 1
+    private func goBack() {
+        slideFromRight = false
+        withAnimation(.easeInOut(duration: 0.3)) {
+            switch step {
+            case .profile: break
+            case .healthKit: step = .profile
+            case .reminders: step = .healthKit
+            case .streakNotifications: step = .reminders
+            case .liveActivity: step = .streakNotifications
+            case .done: break
+            }
         }
-    }
-
-    private var weightBinding: Binding<Double> {
-        Binding(
-            get: { weightValue },
-            set: { weightValue = min(max($0, weightRange.lowerBound), weightRange.upperBound) }
-        )
     }
 
     private var weightKG: Double {
         switch weightUnit {
-        case .kilograms:
-            weightValue
-        case .pounds:
-            HydrationGoalRecommender.kilograms(fromPounds: weightValue)
+        case .kilograms: weightValue
+        case .pounds: HydrationGoalRecommender.kilograms(fromPounds: weightValue)
         }
     }
 
@@ -297,15 +371,6 @@ private struct OnboardingView: View {
         HydrationAmountFormatter.amount(recommendedGoalML, unitSystem: state.settings.unitSystem)
     }
 
-    private var weightText: String {
-        switch weightUnit {
-        case .kilograms:
-            "\(Int(weightValue.rounded())) kg"
-        case .pounds:
-            "\(Int(weightValue.rounded())) lb"
-        }
-    }
-
     private func initializeDefaults() {
         guard !hasInitialized else { return }
         hasInitialized = true
@@ -313,11 +378,115 @@ private struct OnboardingView: View {
         weightUnit = state.settings.unitSystem == .imperial ? .pounds : .kilograms
         let defaultWeightKG = state.settings.profileWeightKG ?? 70
         switch weightUnit {
-        case .kilograms:
-            weightValue = defaultWeightKG
-        case .pounds:
-            weightValue = HydrationGoalRecommender.pounds(fromKilograms: defaultWeightKG)
+        case .kilograms: weightValue = defaultWeightKG
+        case .pounds: weightValue = HydrationGoalRecommender.pounds(fromKilograms: defaultWeightKG)
         }
+    }
+
+    private func completeOnboarding() async -> Bool {
+        let safeWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
+        let goalML = HydrationGoalRecommender.dailyGoalML(weightKG: safeWeightKG, gender: gender)
+        await state.updateSettings {
+            $0.profileGender = gender
+            $0.profileWeightKG = safeWeightKG
+            $0.dailyGoalML = goalML
+            $0.hasCompletedOnboarding = true
+        }
+        return state.settings.hasCompletedOnboarding
+    }
+}
+
+private struct ProfileStepView: View {
+    @Binding var gender: HydrationProfileGender
+    @Binding var weightUnit: OnboardingWeightUnit
+    @Binding var weightValue: Double
+    let recommendationText: String
+    let onContinue: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("A good first goal starts with a quick body-weight estimate.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
+                .padding(.top, 4)
+
+            Form {
+                Section("Profile") {
+                    Picker("Gender", selection: $gender) {
+                        ForEach(HydrationProfileGender.allCases, id: \.self) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+
+                    Picker("Weight unit", selection: $weightUnit) {
+                        ForEach(OnboardingWeightUnit.allCases) { unit in
+                            Text(unit.title).tag(unit)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: weightUnit) { oldValue, newValue in
+                        convertWeight(from: oldValue, to: newValue)
+                    }
+
+                    LabeledContent("Weight") {
+                        HStack(spacing: 8) {
+                            TextField("Weight", value: weightBinding, format: .number.precision(.fractionLength(0)))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 72)
+                            Text(weightUnit.title)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Slider(value: weightBinding, in: weightRange, step: 1)
+                        .accessibilityLabel("Weight")
+                        .accessibilityValue("\(Int(weightValue.rounded())) \(weightUnit.title)")
+                }
+
+                Section("Recommended Daily Goal") {
+                    LabeledContent("Starting goal", value: recommendationText)
+                    Text("You can tune the daily goal later in Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button { onContinue() } label: {
+                Text("Continue")
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(red: 0.05, green: 0.58, blue: 0.48))
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    private var weightRange: ClosedRange<Double> {
+        switch weightUnit {
+        case .kilograms:
+            return HydrationValidation.minimumProfileWeightKG...HydrationValidation.maximumProfileWeightKG
+        case .pounds:
+            let minimum = HydrationGoalRecommender.pounds(fromKilograms: HydrationValidation.minimumProfileWeightKG)
+            let maximum = HydrationGoalRecommender.pounds(fromKilograms: HydrationValidation.maximumProfileWeightKG)
+            return minimum...maximum
+        }
+    }
+
+    private var weightBinding: Binding<Double> {
+        Binding(
+            get: { weightValue },
+            set: { weightValue = min(max($0, weightRange.lowerBound), weightRange.upperBound) }
+        )
     }
 
     private func convertWeight(from oldUnit: OnboardingWeightUnit, to newUnit: OnboardingWeightUnit) {
@@ -331,16 +500,133 @@ private struct OnboardingView: View {
             break
         }
     }
+}
 
-    private func completeOnboarding() async {
-        let safeWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
-        let goalML = HydrationGoalRecommender.dailyGoalML(weightKG: safeWeightKG, gender: gender)
-        await state.updateSettings {
-            $0.profileGender = gender
-            $0.profileWeightKG = safeWeightKG
-            $0.dailyGoalML = goalML
-            $0.hasCompletedOnboarding = true
+private struct OnboardingPermissionStepView: View {
+    let symbol: String
+    let symbolColor: Color
+    let title: String
+    let bodyText: String
+    let primaryLabel: String
+    let skipLabel: String
+    let onAllow: () async -> Void
+    let onSkip: () async -> Void
+
+    @State private var isLoading = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Image(systemName: symbol)
+                .font(.system(size: 72))
+                .foregroundStyle(symbolColor)
+                .padding(.bottom, 32)
+
+            Text(title)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 16)
+                .padding(.horizontal, 32)
+
+            Text(bodyText)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            Spacer()
+
+            VStack(spacing: 14) {
+                Button {
+                    isLoading = true
+                    Task {
+                        await onAllow()
+                    }
+                } label: {
+                    Group {
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(primaryLabel)
+                                .font(.system(.headline, design: .rounded, weight: .semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.05, green: 0.58, blue: 0.48))
+                .disabled(isLoading)
+
+                Button(skipLabel) {
+                    isLoading = true
+                    Task {
+                        await onSkip()
+                    }
+                }
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.secondary)
+                .disabled(isLoading)
+                .padding(.bottom, 8)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct DoneStepView: View {
+    let onStart: () async -> Bool
+    @State private var isLoading = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 72))
+                .foregroundStyle(Color(red: 0.05, green: 0.58, blue: 0.48))
+                .padding(.bottom, 32)
+
+            Text("You're all set!")
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .padding(.bottom, 16)
+
+            Text("Your hydration journey starts now. Tap the glass each time you drink — we'll keep track.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button {
+                isLoading = true
+                Task {
+                    let didComplete = await onStart()
+                    if !didComplete {
+                        isLoading = false
+                    }
+                }
+            } label: {
+                Group {
+                    if isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Start Tracking")
+                            .font(.system(.headline, design: .rounded, weight: .semibold))
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(red: 0.05, green: 0.58, blue: 0.48))
+            .disabled(isLoading)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
