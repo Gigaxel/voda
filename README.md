@@ -4,6 +4,10 @@ Voda is simple, water drinking reminder, SwiftUI app for iPhone.
 
 The core interaction is a large animated glass of water. The glass starts empty each day, fills as the user logs water, and celebrates goal completion with polished liquid motion.
 
+## Preview
+
+<img src="docs/voda_preview.png" alt="Voda app preview" width="320">
+
 ## Targets
 
 - `Voda`: iOS SwiftUI app.
@@ -55,4 +59,3 @@ open Voda.xcodeproj
 ```
 
 For device runs, select your development team on the app and widget targets. HealthKit and App Group behavior require valid signing and capabilities.
-
