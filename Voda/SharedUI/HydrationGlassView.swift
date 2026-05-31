@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum AqualumeAnimationBudget {
+enum VodaAnimationBudget {
     static let waterFrameInterval: TimeInterval = 1.0 / 24.0
     static let confettiFrameInterval: TimeInterval = 1.0 / 30.0
 
@@ -30,7 +30,7 @@ struct HydrationGlassView: View {
             ZStack {
                 goalGlow
 
-                TimelineView(.animation(minimumInterval: AqualumeAnimationBudget.waterFrameInterval, paused: waterTimelinePaused)) { timeline in
+                TimelineView(.animation(minimumInterval: VodaAnimationBudget.waterFrameInterval, paused: waterTimelinePaused)) { timeline in
                     Canvas { context, size in
                         drawGlass(in: &context, size: size, date: timeline.date)
                     }
@@ -61,7 +61,7 @@ struct HydrationGlassView: View {
         .buttonStyle(.plain)
         .onAppear {
             animatedProgress = progress
-            bubbles = WaterBubbleParticle.make(count: AqualumeAnimationBudget.ambientBubbleCount)
+            bubbles = WaterBubbleParticle.make(count: VodaAnimationBudget.ambientBubbleCount)
         }
         .onChange(of: progress) { newValue in
             withAnimation(reduceMotion ? .linear(duration: 0.1) : .spring(response: 0.86, dampingFraction: 0.84)) {
@@ -73,7 +73,7 @@ struct HydrationGlassView: View {
             rippleScale = 0.35
             rippleOpacity = 0.55
             bubbleStartedAt = Date()
-            bubbles = WaterBubbleParticle.make(count: reachedGoal ? AqualumeAnimationBudget.goalBubbleCount : AqualumeAnimationBudget.burstBubbleCount)
+            bubbles = WaterBubbleParticle.make(count: reachedGoal ? VodaAnimationBudget.goalBubbleCount : VodaAnimationBudget.burstBubbleCount)
             withAnimation(.easeOut(duration: 0.85)) {
                 rippleScale = 1.18
                 rippleOpacity = 0

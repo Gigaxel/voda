@@ -5,22 +5,6 @@ public enum HydrationUnitSystem: String, Codable, CaseIterable, Equatable, Senda
     case imperial
 }
 
-public enum HydrationProfileGender: String, Codable, CaseIterable, Equatable, Sendable {
-    case female
-    case male
-    case nonBinary
-    case preferNotToSay
-
-    public var displayName: String {
-        switch self {
-        case .female: "Female"
-        case .male: "Male"
-        case .nonBinary: "Non-binary"
-        case .preferNotToSay: "Prefer not to say"
-        }
-    }
-}
-
 public enum HydrationLogSource: String, Codable, CaseIterable, Equatable, Sendable {
     case iPhone
     case widget
@@ -84,7 +68,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
     public var dailyGoalML: Int
     public var defaultAmountML: Int
     public var unitSystem: HydrationUnitSystem
-    public var profileGender: HydrationProfileGender?
     public var profileWeightKG: Double?
     public var hasCompletedOnboarding: Bool
     public var remindersEnabled: Bool
@@ -98,7 +81,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         dailyGoalML: Int = 2_000,
         defaultAmountML: Int = 250,
         unitSystem: HydrationUnitSystem = .metric,
-        profileGender: HydrationProfileGender? = nil,
         profileWeightKG: Double? = nil,
         hasCompletedOnboarding: Bool = false,
         remindersEnabled: Bool = false,
@@ -111,7 +93,6 @@ public struct UserHydrationSettings: Codable, Equatable, Sendable {
         self.dailyGoalML = dailyGoalML
         self.defaultAmountML = defaultAmountML
         self.unitSystem = unitSystem
-        self.profileGender = profileGender
         self.profileWeightKG = profileWeightKG
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.remindersEnabled = remindersEnabled
@@ -241,19 +222,9 @@ public enum HydrationGoalRecommender {
         kilograms * poundsPerKilogram
     }
 
-    public static func dailyGoalML(weightKG: Double, gender: HydrationProfileGender) -> Int {
+    public static func dailyGoalML(weightKG: Double) -> Int {
         let safeWeight = HydrationValidation.validatedProfileWeightKG(weightKG)
-        let multiplier: Double
-        switch gender {
-        case .female:
-            multiplier = 31
-        case .male:
-            multiplier = 35
-        case .nonBinary, .preferNotToSay:
-            multiplier = 33
-        }
-
-        let rawGoal = safeWeight * multiplier
+        let rawGoal = safeWeight * 33
         let roundedGoal = Int((rawGoal / 50).rounded() * 50)
         return HydrationValidation.validatedGoal(roundedGoal)
     }

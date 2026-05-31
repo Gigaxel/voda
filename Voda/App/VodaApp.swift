@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct AqualumeApp: App {
+struct VodaApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var state: HydrationAppState
 
@@ -32,7 +32,7 @@ struct AqualumeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AqualumeRootView()
+            VodaRootView()
                 .environmentObject(state)
                 .task {
                     await state.load()

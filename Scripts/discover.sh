@@ -8,7 +8,7 @@ if [[ -z "${project}" ]]; then
 fi
 
 echo "Project: ${project}"
-xcodebuild -list -project Aqualume.xcodeproj
+xcodebuild -list -project Voda.xcodeproj
 echo
 if ! xcrun simctl list devices available | sed -n '1,80p'; then
   echo "Simulator device listing unavailable."

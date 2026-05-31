@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-struct AqualumeRootView: View {
+struct VodaRootView: View {
     @EnvironmentObject private var state: HydrationAppState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showingSettings = false
@@ -13,7 +13,7 @@ struct AqualumeRootView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AqualumeBackground()
+                VodaBackground()
 
                 VStack(spacing: 20) {
                     ProgressReadout(
@@ -54,7 +54,7 @@ struct AqualumeRootView: View {
                         } label: {
                             Label("Undo", systemImage: "arrow.uturn.backward")
                         }
-                        .buttonStyle(AqualumeHomeActionButtonStyle())
+                        .buttonStyle(VodaHomeActionButtonStyle())
                         .disabled(!state.canUndo)
 
                         NavigationLink {
@@ -62,7 +62,7 @@ struct AqualumeRootView: View {
                         } label: {
                             Label("History", systemImage: "chart.bar")
                         }
-                        .buttonStyle(AqualumeHomeActionButtonStyle())
+                        .buttonStyle(VodaHomeActionButtonStyle())
                     }
                 }
                 .padding(.horizontal, 24)
@@ -76,7 +76,7 @@ struct AqualumeRootView: View {
                 )
                 .ignoresSafeArea()
             }
-            .navigationTitle("Aqualume")
+            .navigationTitle("Voda")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -113,14 +113,14 @@ struct AqualumeRootView: View {
         let hadReachedGoal = state.hasReachedGoal
         rippleID = UUID()
         floatingAmount = amountML
-        AqualumeHaptics.log()
+        VodaHaptics.log()
 
         await state.log(amountML: amountML)
         let didReachGoal = !hadReachedGoal && state.hasReachedGoal
 
         if didReachGoal {
             triggerGoalCelebration()
-            AqualumeHaptics.goal()
+            VodaHaptics.goal()
         }
 
         guard !reduceMotion else {
@@ -171,7 +171,6 @@ private enum OnboardingWeightUnit: String, CaseIterable, Identifiable {
 private struct OnboardingView: View {
     @EnvironmentObject private var state: HydrationAppState
 
-    @State private var gender: HydrationProfileGender = .preferNotToSay
     @State private var weightUnit: OnboardingWeightUnit = .kilograms
     @State private var weightValue = 70.0
     @State private var hasInitialized = false
@@ -184,7 +183,7 @@ private struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            AqualumeBackground()
+            VodaBackground()
             VStack(spacing: 0) {
                 if step != .done {
                     HStack {
@@ -238,7 +237,6 @@ private struct OnboardingView: View {
         switch step {
         case .profile:
             ProfileStepView(
-                gender: $gender,
                 weightUnit: $weightUnit,
                 weightValue: $weightValue,
                 recommendationText: recommendationText,
@@ -266,7 +264,7 @@ private struct OnboardingView: View {
                 symbol: "bell.badge.fill",
                 symbolColor: Color(red: 0.05, green: 0.58, blue: 0.48),
                 title: "Gentle Reminders",
-                bodyText: "Aqualume can nudge you throughout the day so staying hydrated becomes effortless. Configure the schedule in Settings whenever you like.",
+                bodyText: "Voda can nudge you throughout the day so staying hydrated becomes effortless. Configure the schedule in Settings whenever you like.",
                 primaryLabel: "Allow Notifications",
                 skipLabel: "Not Now",
                 onAllow: {
@@ -364,7 +362,7 @@ private struct OnboardingView: View {
     }
 
     private var recommendedGoalML: Int {
-        HydrationGoalRecommender.dailyGoalML(weightKG: weightKG, gender: gender)
+        HydrationGoalRecommender.dailyGoalML(weightKG: weightKG)
     }
 
     private var recommendationText: String {
@@ -374,7 +372,6 @@ private struct OnboardingView: View {
     private func initializeDefaults() {
         guard !hasInitialized else { return }
         hasInitialized = true
-        gender = state.settings.profileGender ?? .preferNotToSay
         weightUnit = state.settings.unitSystem == .imperial ? .pounds : .kilograms
         let defaultWeightKG = state.settings.profileWeightKG ?? 70
         switch weightUnit {
@@ -385,9 +382,8 @@ private struct OnboardingView: View {
 
     private func completeOnboarding() async -> Bool {
         let safeWeightKG = HydrationValidation.validatedProfileWeightKG(weightKG)
-        let goalML = HydrationGoalRecommender.dailyGoalML(weightKG: safeWeightKG, gender: gender)
+        let goalML = HydrationGoalRecommender.dailyGoalML(weightKG: safeWeightKG)
         await state.updateSettings {
-            $0.profileGender = gender
             $0.profileWeightKG = safeWeightKG
             $0.dailyGoalML = goalML
             $0.hasCompletedOnboarding = true
@@ -397,7 +393,6 @@ private struct OnboardingView: View {
 }
 
 private struct ProfileStepView: View {
-    @Binding var gender: HydrationProfileGender
     @Binding var weightUnit: OnboardingWeightUnit
     @Binding var weightValue: Double
     let recommendationText: String
@@ -415,12 +410,6 @@ private struct ProfileStepView: View {
 
             Form {
                 Section("Profile") {
-                    Picker("Gender", selection: $gender) {
-                        ForEach(HydrationProfileGender.allCases, id: \.self) { option in
-                            Text(option.displayName).tag(option)
-                        }
-                    }
-
                     Picker("Weight unit", selection: $weightUnit) {
                         ForEach(OnboardingWeightUnit.allCases) { unit in
                             Text(unit.title).tag(unit)
@@ -630,7 +619,7 @@ private struct DoneStepView: View {
     }
 }
 
-struct AqualumeBackground: View {
+struct VodaBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -661,7 +650,7 @@ struct AqualumeBackground: View {
     }
 }
 
-private struct AqualumeHomeActionButtonStyle: ButtonStyle {
+private struct VodaHomeActionButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isEnabled) private var isEnabled
 

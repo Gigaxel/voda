@@ -1,7 +1,7 @@
 #if os(iOS)
 import UIKit
 
-enum AqualumeHaptics {
+enum VodaHaptics {
     @MainActor
     static func log() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -13,7 +13,7 @@ enum AqualumeHaptics {
     }
 }
 #else
-enum AqualumeHaptics {
+enum VodaHaptics {
     @MainActor
     static func log() {}
     @MainActor

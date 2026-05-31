@@ -34,7 +34,7 @@ public struct HydrationLogWriteSummary: Equatable, Sendable {
 }
 
 public enum RepositoryLocation {
-    public static let appGroupID = "group.com.gigaxel.aqualume"
+    public static let appGroupID = "group.com.gigaxel.voda"
 
     public static func sharedDirectory(appGroupID: String = appGroupID) -> URL {
         if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
@@ -43,7 +43,7 @@ public enum RepositoryLocation {
 
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("Aqualume", isDirectory: true)
+        return base.appendingPathComponent("Voda", isDirectory: true)
     }
 }
 
@@ -440,7 +440,6 @@ private enum SQLiteHydrationStore {
                 daily_goal_ml INTEGER NOT NULL,
                 default_amount_ml INTEGER NOT NULL,
                 unit_system TEXT NOT NULL,
-                profile_gender TEXT,
                 profile_weight_kg REAL,
                 has_completed_onboarding INTEGER NOT NULL,
                 reminders_enabled INTEGER NOT NULL,
@@ -626,7 +625,6 @@ private enum SQLiteHydrationStore {
         SELECT daily_goal_ml,
                default_amount_ml,
                unit_system,
-               profile_gender,
                profile_weight_kg,
                has_completed_onboarding,
                reminders_enabled,
@@ -655,32 +653,29 @@ private enum SQLiteHydrationStore {
 
         let unitSystem = columnString(statement, 2)
             .flatMap(HydrationUnitSystem.init(rawValue:)) ?? .metric
-        let profileGender = columnString(statement, 3)
-            .flatMap(HydrationProfileGender.init(rawValue:))
-        let profileWeightKG = sqlite3_column_type(statement, 4) == SQLITE_NULL
+        let profileWeightKG = sqlite3_column_type(statement, 3) == SQLITE_NULL
             ? nil
-            : sqlite3_column_double(statement, 4)
+            : sqlite3_column_double(statement, 3)
         let reminderSchedule = ReminderSchedule(
-            startHour: Int(sqlite3_column_int64(statement, 7)),
-            startMinute: Int(sqlite3_column_int64(statement, 8)),
-            endHour: Int(sqlite3_column_int64(statement, 9)),
-            endMinute: Int(sqlite3_column_int64(statement, 10)),
-            intervalMinutes: Int(sqlite3_column_int64(statement, 11))
+            startHour: Int(sqlite3_column_int64(statement, 6)),
+            startMinute: Int(sqlite3_column_int64(statement, 7)),
+            endHour: Int(sqlite3_column_int64(statement, 8)),
+            endMinute: Int(sqlite3_column_int64(statement, 9)),
+            intervalMinutes: Int(sqlite3_column_int64(statement, 10))
         )
 
         return UserHydrationSettings(
             dailyGoalML: Int(sqlite3_column_int64(statement, 0)),
             defaultAmountML: Int(sqlite3_column_int64(statement, 1)),
             unitSystem: unitSystem,
-            profileGender: profileGender,
             profileWeightKG: profileWeightKG,
-            hasCompletedOnboarding: sqlite3_column_int64(statement, 5) == 1,
-            remindersEnabled: sqlite3_column_int64(statement, 6) == 1,
+            hasCompletedOnboarding: sqlite3_column_int64(statement, 4) == 1,
+            remindersEnabled: sqlite3_column_int64(statement, 5) == 1,
             reminderSchedule: reminderSchedule,
-            streakNotificationsEnabled: sqlite3_column_int64(statement, 12) == 1,
-            streakReminderHour: Int(sqlite3_column_int64(statement, 13)),
-            streakReminderMinute: Int(sqlite3_column_int64(statement, 14)),
-            healthKitEnabled: sqlite3_column_int64(statement, 15) == 1
+            streakNotificationsEnabled: sqlite3_column_int64(statement, 11) == 1,
+            streakReminderHour: Int(sqlite3_column_int64(statement, 12)),
+            streakReminderMinute: Int(sqlite3_column_int64(statement, 13)),
+            healthKitEnabled: sqlite3_column_int64(statement, 14) == 1
         )
     }
 
@@ -691,7 +686,6 @@ private enum SQLiteHydrationStore {
             daily_goal_ml,
             default_amount_ml,
             unit_system,
-            profile_gender,
             profile_weight_kg,
             has_completed_onboarding,
             reminders_enabled,
@@ -705,12 +699,11 @@ private enum SQLiteHydrationStore {
             streak_reminder_minute,
             healthkit_enabled
         )
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             daily_goal_ml = excluded.daily_goal_ml,
             default_amount_ml = excluded.default_amount_ml,
             unit_system = excluded.unit_system,
-            profile_gender = excluded.profile_gender,
             profile_weight_kg = excluded.profile_weight_kg,
             has_completed_onboarding = excluded.has_completed_onboarding,
             reminders_enabled = excluded.reminders_enabled,
@@ -730,19 +723,18 @@ private enum SQLiteHydrationStore {
         try database.bind(settings.dailyGoalML, at: 1, in: statement)
         try database.bind(settings.defaultAmountML, at: 2, in: statement)
         try database.bind(settings.unitSystem.rawValue, at: 3, in: statement)
-        try database.bind(settings.profileGender?.rawValue, at: 4, in: statement)
-        try database.bind(settings.profileWeightKG, at: 5, in: statement)
-        try database.bind(settings.hasCompletedOnboarding, at: 6, in: statement)
-        try database.bind(settings.remindersEnabled, at: 7, in: statement)
-        try database.bind(settings.reminderSchedule.startHour, at: 8, in: statement)
-        try database.bind(settings.reminderSchedule.startMinute, at: 9, in: statement)
-        try database.bind(settings.reminderSchedule.endHour, at: 10, in: statement)
-        try database.bind(settings.reminderSchedule.endMinute, at: 11, in: statement)
-        try database.bind(settings.reminderSchedule.intervalMinutes, at: 12, in: statement)
-        try database.bind(settings.streakNotificationsEnabled, at: 13, in: statement)
-        try database.bind(settings.streakReminderHour, at: 14, in: statement)
-        try database.bind(settings.streakReminderMinute, at: 15, in: statement)
-        try database.bind(settings.healthKitEnabled, at: 16, in: statement)
+        try database.bind(settings.profileWeightKG, at: 4, in: statement)
+        try database.bind(settings.hasCompletedOnboarding, at: 5, in: statement)
+        try database.bind(settings.remindersEnabled, at: 6, in: statement)
+        try database.bind(settings.reminderSchedule.startHour, at: 7, in: statement)
+        try database.bind(settings.reminderSchedule.startMinute, at: 8, in: statement)
+        try database.bind(settings.reminderSchedule.endHour, at: 9, in: statement)
+        try database.bind(settings.reminderSchedule.endMinute, at: 10, in: statement)
+        try database.bind(settings.reminderSchedule.intervalMinutes, at: 11, in: statement)
+        try database.bind(settings.streakNotificationsEnabled, at: 12, in: statement)
+        try database.bind(settings.streakReminderHour, at: 13, in: statement)
+        try database.bind(settings.streakReminderMinute, at: 14, in: statement)
+        try database.bind(settings.healthKitEnabled, at: 15, in: statement)
         try database.stepDone(statement, sql: sql)
     }
 

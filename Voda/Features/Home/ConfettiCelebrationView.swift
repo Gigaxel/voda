@@ -9,7 +9,7 @@ struct ConfettiCelebrationView: View {
     @State private var pieces: [ConfettiPiece] = []
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: AqualumeAnimationBudget.confettiFrameInterval, paused: timelinePaused)) { timeline in
+        TimelineView(.animation(minimumInterval: VodaAnimationBudget.confettiFrameInterval, paused: timelinePaused)) { timeline in
             Canvas { context, size in
                 drawConfetti(in: &context, size: size, date: timeline.date)
             }

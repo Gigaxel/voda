@@ -73,7 +73,7 @@ struct SettingsView: View {
                 }
 
                 Section("About") {
-                    LabeledContent("Aqualume", value: "Fill your day.")
+                    LabeledContent("Voda", value: "Fill your day.")
                 }
 
                 if showsDevelopmentOnboardingControls {
@@ -110,7 +110,7 @@ struct SettingsView: View {
 
     private var showsDevelopmentOnboardingControls: Bool {
         #if DEBUG
-        ProcessInfo.processInfo.environment["AQUALUME_ENABLE_ONBOARDING_RESET"] == "1"
+        ProcessInfo.processInfo.environment["VODA_ENABLE_ONBOARDING_RESET"] == "1"
         #else
         false
         #endif

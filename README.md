@@ -1,20 +1,18 @@
-# Aqualume
+# Voda
 
-Aqualume is a premium SwiftUI hydration app for iPhone.
-
-Tagline: **Fill your day.**
+Voda is simple, water drinking reminder, SwiftUI app for iPhone.
 
 The core interaction is a large animated glass of water. The glass starts empty each day, fills as the user logs water, and celebrates goal completion with polished liquid motion.
 
 ## Targets
 
-- `Aqualume`: iOS SwiftUI app.
-- `AqualumeWidgetExtension`: WidgetKit widget with App Intent quick-add.
-- `AqualumeTests`: unit tests for hydration logic, persistence, settings, and related behavior.
+- `Voda`: iOS SwiftUI app.
+- `VodaWidgetExtension`: WidgetKit widget with App Intent quick-add.
+- `VodaTests`: unit tests for hydration logic, persistence, settings, and related behavior.
 
 ## Current Scope
 
-The MVP includes:
+The app currently includes:
 
 - Animated filling Tumbler glass.
 - One-tap hydration logging.
@@ -53,13 +51,8 @@ The scripts detect available projects, schemes, destinations, and SDK fallbacks 
 Open the project:
 
 ```bash
-open Aqualume.xcodeproj
+open Voda.xcodeproj
 ```
 
 For device runs, select your development team on the app and widget targets. HealthKit and App Group behavior require valid signing and capabilities.
 
-## Known Caveats
-
-- HealthKit live write validation requires a signed build with the HealthKit entitlement.
-- App Group runtime access requires a valid app group entitlement and provisioning profile.
-- Manual validation is still recommended for notification delivery, widget gallery placement, App Intent execution, haptics, VoiceOver, and Reduce Motion.

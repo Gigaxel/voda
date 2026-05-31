@@ -3,37 +3,37 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-private enum AqualumeWidgetKind {
-    static let progress = "AqualumeProgressWidget"
+private enum VodaWidgetKind {
+    static let progress = "VodaProgressWidget"
 }
 
-struct AqualumeWidgetEntry: TimelineEntry {
+struct VodaWidgetEntry: TimelineEntry {
     let date: Date
     let snapshot: HydrationSnapshot
 }
 
-struct AqualumeTimelineProvider: TimelineProvider {
-    func placeholder(in context: Context) -> AqualumeWidgetEntry {
-        AqualumeWidgetEntry(date: Date(), snapshot: HydrationSnapshot(logs: [], settings: UserHydrationSettings()))
+struct VodaTimelineProvider: TimelineProvider {
+    func placeholder(in context: Context) -> VodaWidgetEntry {
+        VodaWidgetEntry(date: Date(), snapshot: HydrationSnapshot(logs: [], settings: UserHydrationSettings()))
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (AqualumeWidgetEntry) -> Void) {
-        completion(AqualumeWidgetEntry(date: Date(), snapshot: HydrationSnapshotReader.load()))
+    func getSnapshot(in context: Context, completion: @escaping (VodaWidgetEntry) -> Void) {
+        completion(VodaWidgetEntry(date: Date(), snapshot: HydrationSnapshotReader.load()))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<AqualumeWidgetEntry>) -> Void) {
-        let entry = AqualumeWidgetEntry(date: Date(), snapshot: HydrationSnapshotReader.load())
+    func getTimeline(in context: Context, completion: @escaping (Timeline<VodaWidgetEntry>) -> Void) {
+        let entry = VodaWidgetEntry(date: Date(), snapshot: HydrationSnapshotReader.load())
         let next = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date().addingTimeInterval(1_800)
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
 }
 
-struct AqualumeProgressWidget: Widget {
+struct VodaProgressWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: AqualumeWidgetKind.progress, provider: AqualumeTimelineProvider()) { entry in
-            AqualumeWidgetView(entry: entry)
+        StaticConfiguration(kind: VodaWidgetKind.progress, provider: VodaTimelineProvider()) { entry in
+            VodaWidgetView(entry: entry)
         }
-        .configurationDisplayName("Aqualume")
+        .configurationDisplayName("Voda")
         .description("See today's water progress and add a glass.")
         .supportedFamilies([
             .systemSmall,
@@ -46,9 +46,9 @@ struct AqualumeProgressWidget: Widget {
     }
 }
 
-struct AqualumeWidgetView: View {
+struct VodaWidgetView: View {
     @Environment(\.widgetFamily) private var family
-    let entry: AqualumeWidgetEntry
+    let entry: VodaWidgetEntry
 
     private var progress: Double { entry.snapshot.progress }
     private var percent: Int { Int((progress * 100).rounded()) }
@@ -281,7 +281,7 @@ private struct WidgetQuickAddButtonStyle: ButtonStyle {
 
 struct WidgetQuickAddWaterIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Water"
-    static let description = IntentDescription("Add the default glass amount to Aqualume.")
+    static let description = IntentDescription("Add the default glass amount to Voda.")
 
     @Parameter(title: "Amount in ml")
     var amountML: Int
@@ -296,7 +296,7 @@ struct WidgetQuickAddWaterIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         let summary = try await QuickAddWaterPerformer.logWater(amountML: amountML)
-        WidgetCenter.shared.reloadTimelines(ofKind: AqualumeWidgetKind.progress)
+        WidgetCenter.shared.reloadTimelines(ofKind: VodaWidgetKind.progress)
         await QuickAddWaterPerformer.refreshLiveActivities(with: summary)
         return .result()
     }
@@ -304,7 +304,7 @@ struct WidgetQuickAddWaterIntent: AppIntent {
 
 struct QuickAddWaterIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Add Water"
-    static let description = IntentDescription("Add the default glass amount to Aqualume.")
+    static let description = IntentDescription("Add the default glass amount to Voda.")
 
     @Parameter(title: "Amount in ml")
     var amountML: Int
@@ -319,7 +319,7 @@ struct QuickAddWaterIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         let summary = try await QuickAddWaterPerformer.logWater(amountML: amountML)
-        WidgetCenter.shared.reloadTimelines(ofKind: AqualumeWidgetKind.progress)
+        WidgetCenter.shared.reloadTimelines(ofKind: VodaWidgetKind.progress)
         await QuickAddWaterPerformer.refreshLiveActivities(with: summary)
         return .result()
     }

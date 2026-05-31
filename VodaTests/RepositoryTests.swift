@@ -1,5 +1,5 @@
 import XCTest
-@testable import Aqualume
+@testable import Voda
 
 final class RepositoryTests: XCTestCase {
     func testInMemoryRepositoryPersistsLogsAndSettings() async throws {
@@ -10,7 +10,6 @@ final class RepositoryTests: XCTestCase {
         var settings = UserHydrationSettings()
         settings.dailyGoalML = 2_500
         settings.unitSystem = .imperial
-        settings.profileGender = .male
         settings.profileWeightKG = 82
         settings.hasCompletedOnboarding = true
         settings.reminderSchedule = ReminderSchedule(startHour: 8, startMinute: 30, endHour: 20, endMinute: 45)
@@ -24,7 +23,6 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(logs, [log])
         XCTAssertEqual(loadedSettings.dailyGoalML, 2_500)
         XCTAssertEqual(loadedSettings.unitSystem, .imperial)
-        XCTAssertEqual(loadedSettings.profileGender, .male)
         XCTAssertEqual(loadedSettings.profileWeightKG, 82)
         XCTAssertTrue(loadedSettings.hasCompletedOnboarding)
         XCTAssertEqual(loadedSettings.reminderSchedule.startMinute, 30)
@@ -60,7 +58,6 @@ final class RepositoryTests: XCTestCase {
         var settings = UserHydrationSettings()
         settings.dailyGoalML = 2_750
         settings.defaultAmountML = 330
-        settings.profileGender = .female
         settings.profileWeightKG = 64
         settings.hasCompletedOnboarding = true
         settings.reminderSchedule = ReminderSchedule(startHour: 7, startMinute: 10, endHour: 22, endMinute: 35)
@@ -77,6 +74,7 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(loadedLogs, [log])
         XCTAssertEqual(loadedSettings, settings)
     }
+
 
     func testSQLiteRepositoryPersistsDailyGoalSnapshots() async throws {
         let directory = FileManager.default.temporaryDirectory

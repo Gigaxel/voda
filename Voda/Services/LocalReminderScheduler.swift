@@ -6,9 +6,9 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
     private let center: UNUserNotificationCenter
     private let calendar: Calendar
     private let now: @Sendable () -> Date
-    private let reminderPrefix = "aqualume.reminder."
-    private let streakReminderPrefix = "aqualume.streak.reminder."
-    private let streakMilestonePrefix = "aqualume.streak.milestone."
+    private let reminderPrefix = "voda.reminder."
+    private let streakReminderPrefix = "voda.streak.reminder."
+    private let streakMilestonePrefix = "voda.streak.milestone."
     private let maxScheduledReminderRequests = 60
 
     public init(
@@ -55,7 +55,7 @@ public final class LocalReminderScheduler: ReminderScheduling, @unchecked Sendab
                 guard let reminderDate = calendar.date(from: components), reminderDate > referenceDate else { continue }
 
                 let content = UNMutableNotificationContent()
-                content.title = "Aqualume"
+                content.title = "Voda"
                 content.body = hydrationReminderMessage()
                 content.sound = .default
 

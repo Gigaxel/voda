@@ -1,5 +1,5 @@
 import XCTest
-@testable import Aqualume
+@testable import Voda
 
 private final class TestClock: @unchecked Sendable {
     var current: Date
@@ -195,19 +195,10 @@ final class HydrationLogicTests: XCTestCase {
         XCTAssertEqual(summaries.map(\.progress), [1, 0.5])
     }
 
-    func testGoalRecommendationUsesWeightAndGender() {
-        XCTAssertEqual(
-            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .female),
-            2_150
-        )
-        XCTAssertEqual(
-            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .male),
-            2_450
-        )
-        XCTAssertEqual(
-            HydrationGoalRecommender.dailyGoalML(weightKG: 70, gender: .preferNotToSay),
-            2_300
-        )
+    func testGoalRecommendationUsesWeightOnly() {
+        XCTAssertEqual(HydrationGoalRecommender.dailyGoalML(weightKG: 70), 2_300)
+        XCTAssertEqual(HydrationGoalRecommender.dailyGoalML(weightKG: 10), 1_000)
+        XCTAssertEqual(HydrationGoalRecommender.dailyGoalML(weightKG: 400), 8_250)
     }
 
     func testSettingsValidation() {
@@ -426,7 +417,6 @@ final class HydrationLogicTests: XCTestCase {
     func testDevelopmentOnboardingReplayOnlyClearsCompletionFlag() async {
         let settings = UserHydrationSettings(
             dailyGoalML: 2_850,
-            profileGender: .male,
             profileWeightKG: 82,
             hasCompletedOnboarding: true
         )
@@ -441,7 +431,6 @@ final class HydrationLogicTests: XCTestCase {
 
         XCTAssertFalse(state.settings.hasCompletedOnboarding)
         XCTAssertEqual(state.settings.dailyGoalML, 2_850)
-        XCTAssertEqual(state.settings.profileGender, .male)
         XCTAssertEqual(state.settings.profileWeightKG, 82)
     }
 

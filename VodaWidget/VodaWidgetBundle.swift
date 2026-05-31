@@ -2,9 +2,9 @@ import WidgetKit
 import SwiftUI
 
 @main
-struct AqualumeWidgetBundle: WidgetBundle {
+struct VodaWidgetBundle: WidgetBundle {
     var body: some Widget {
-        AqualumeProgressWidget()
+        VodaProgressWidget()
         HydrationLiveActivity()
     }
 }
