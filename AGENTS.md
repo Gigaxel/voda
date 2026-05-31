@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Aqualume is a SwiftUI hydration app with companion targets in one Xcode project. Main iOS app code lives in `Aqualume/`, organized by responsibility: `App/` for the entry point, `Domain/` for hydration models and calculations, `Persistence/` for storage, `Services/` for platform integrations, `Features/` for screens, and `SharedUI/` for reusable SwiftUI views. Tests live in `AqualumeTests/`. The watch app is in `AqualumeWatchApp/`, the WidgetKit extension is in `AqualumeWidget/`, and visual assets are under `Aqualume/Resources/Assets.xcassets/`. Project reference docs include `AQUALUME_SPEC.md`, `DESIGN_SYSTEM.md`, `VALIDATION.md`, and `ASSET_MANIFEST.md`.
+Aqualume is a SwiftUI hydration app with an iOS app, WidgetKit extension, and tests in one Xcode project. Main iOS app code lives in `Aqualume/`, organized by responsibility: `App/` for the entry point, `Domain/` for hydration models and calculations, `Persistence/` for storage, `Services/` for platform integrations, `Features/` for screens, and `SharedUI/` for reusable SwiftUI views. Tests live in `AqualumeTests/`. The WidgetKit extension is in `AqualumeWidget/`, and visual assets are under `Aqualume/Resources/Assets.xcassets/`. Project reference docs include `AQUALUME_SPEC.md`, `DESIGN_SYSTEM.md`, `VALIDATION.md`, and `ASSET_MANIFEST.md`.
 
 ## Build, Test, and Development Commands
 
@@ -12,7 +12,6 @@ Run commands from the repository root.
 - `./Scripts/test.sh`: runs the `AqualumeTests` scheme with `xcodebuild test`.
 - `./Scripts/build-ios.sh`: builds the main `Aqualume` iOS target.
 - `./Scripts/build-widget.sh`: builds `AqualumeWidgetExtension`.
-- `./Scripts/build-watch.sh`: builds `AqualumeWatchApp`, with a watch simulator SDK fallback.
 - `./Scripts/validate-all.sh`: runs discovery, tests, and all target builds.
 - `open Aqualume.xcodeproj`: opens the project for simulator or device work in Xcode.
 
@@ -26,8 +25,8 @@ Tests use XCTest and are grouped by behavior in `AqualumeTests/`, for example `H
 
 ## Commit & Pull Request Guidelines
 
-Recent commits use short imperative subjects, for example `Implement initial onboarding flow;` or `Add randomized messages for daily reminders;`. Keep subjects focused on one change and prefer clear verbs like `Add`, `Fix`, `Implement`, or `Remove`. Pull requests should include a brief summary, validation commands run, linked issue or spec section when relevant, and screenshots or simulator notes for UI changes. Call out any HealthKit, App Group, WatchConnectivity, notification, or provisioning behavior that needs device validation.
+Recent commits use short imperative subjects, for example `Implement initial onboarding flow;` or `Add randomized messages for daily reminders;`. Keep subjects focused on one change and prefer clear verbs like `Add`, `Fix`, `Implement`, or `Remove`. Pull requests should include a brief summary, validation commands run, linked issue or spec section when relevant, and screenshots or simulator notes for UI changes. Call out any HealthKit, App Group, notification, or provisioning behavior that needs device validation.
 
 ## Security & Configuration Tips
 
-Do not commit personal signing settings, secrets, or provisioning artifacts. HealthKit, App Groups, widgets, and watch connectivity require valid entitlements and developer team configuration for device validation.
+Do not commit personal signing settings, secrets, or provisioning artifacts. HealthKit, App Groups, and widgets require valid entitlements and developer team configuration for device validation.

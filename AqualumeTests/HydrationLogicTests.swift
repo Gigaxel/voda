@@ -52,7 +52,7 @@ final class HydrationLogicTests: XCTestCase {
         let day = Date(timeIntervalSince1970: 1_000_000)
         let logs = [
             HydrationLog(amountML: 250, loggedAt: day, source: .iPhone),
-            HydrationLog(amountML: 330, loggedAt: day.addingTimeInterval(60), source: .watch)
+            HydrationLog(amountML: 330, loggedAt: day.addingTimeInterval(60), source: .iPhone)
         ]
 
         XCTAssertEqual(calculator.total(on: day, logs: logs), 580)
@@ -281,7 +281,7 @@ final class HydrationLogicTests: XCTestCase {
         let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
         let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
         let todayLog = HydrationLog(amountML: 500, loggedAt: today, source: .iPhone)
-        let oldLog = HydrationLog(amountML: 2_000, loggedAt: yesterday, source: .watch)
+        let oldLog = HydrationLog(amountML: 2_000, loggedAt: yesterday, source: .iPhone)
         let repository = InMemoryHydrationRepository(logs: [oldLog, todayLog])
         let state = HydrationAppState(
             hydrationRepository: repository,

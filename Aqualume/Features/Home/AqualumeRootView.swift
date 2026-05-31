@@ -308,7 +308,7 @@ private struct OnboardingView: View {
                 symbol: "waveform",
                 symbolColor: Color(red: 0.05, green: 0.58, blue: 0.48),
                 title: "Live Progress",
-                bodyText: "Watch your hydration fill up on the Lock Screen and in the Dynamic Island — no need to open the app.",
+                bodyText: "See your hydration fill up on the Lock Screen and in the Dynamic Island — no need to open the app.",
                 primaryLabel: "Enable Live Activity",
                 skipLabel: "Not Now",
                 onAllow: {

@@ -574,12 +574,12 @@ private enum SQLiteHydrationStore {
         while result == SQLITE_ROW {
             guard
                 let id = columnString(statement, 0).flatMap(UUID.init(uuidString:)),
-                let sourceRawValue = columnString(statement, 3),
-                let source = HydrationLogSource(rawValue: sourceRawValue)
+                let sourceRawValue = columnString(statement, 3)
             else {
                 result = sqlite3_step(statement)
                 continue
             }
+            let source = HydrationLogSource(rawValue: sourceRawValue) ?? .iPhone
             logs.append(
                 HydrationLog(
                     id: id,

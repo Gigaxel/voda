@@ -38,7 +38,7 @@ final class RepositoryTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let repository = SQLiteHydrationRepository(directory: directory)
-        let log = HydrationLog(id: UUID(), amountML: 330, source: .watch)
+        let log = HydrationLog(id: UUID(), amountML: 330, source: .iPhone)
 
         try await repository.appendLog(log)
         try await repository.appendLog(log)
@@ -150,7 +150,7 @@ final class RepositoryTests: XCTestCase {
         let yesterday = DateComponents(calendar: calendar, year: 2026, month: 5, day: 29, hour: 23).date!
         let todayLog = HydrationLog(amountML: 250, loggedAt: today, source: .iPhone)
         let laterLog = HydrationLog(amountML: 330, loggedAt: todayLater, source: .widget)
-        let olderLog = HydrationLog(amountML: 500, loggedAt: yesterday, source: .watch)
+        let olderLog = HydrationLog(amountML: 500, loggedAt: yesterday, source: .iPhone)
 
         try await repository.appendLog(olderLog)
         try await repository.appendLog(laterLog)
@@ -176,7 +176,7 @@ final class RepositoryTests: XCTestCase {
 
         try await repository.appendLog(HydrationLog(amountML: 1_000, loggedAt: beforeRange, source: .iPhone))
         try await repository.appendLog(HydrationLog(amountML: 200, loggedAt: start, source: .iPhone))
-        try await repository.appendLog(HydrationLog(amountML: 300, loggedAt: start.addingTimeInterval(60), source: .watch))
+        try await repository.appendLog(HydrationLog(amountML: 300, loggedAt: start.addingTimeInterval(60), source: .iPhone))
         try await repository.appendLog(HydrationLog(amountML: 400, loggedAt: end, source: .widget))
         try await repository.appendLog(HydrationLog(amountML: 1_000, loggedAt: afterRange, source: .iPhone))
 
@@ -237,7 +237,7 @@ final class RepositoryTests: XCTestCase {
                 day: 29,
                 hour: 9
             ).date!,
-            source: .watch
+            source: .iPhone
         )
         var settings = UserHydrationSettings()
         settings.dailyGoalML = 1_500

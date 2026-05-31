@@ -14,44 +14,31 @@
 		2F5F68CE5D012D9F06D322A9 /* HydrationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91E97531DDA56ABDD86419F /* HydrationRepository.swift */; };
 		316BBFA1880845085610CB4E /* HydrationGlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7C419291CDDAD5E1056DCB /* HydrationGlassView.swift */; };
 		3F22C3C9B6429FEBF6548766 /* HydrationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91E97531DDA56ABDD86419F /* HydrationRepository.swift */; };
-		40F3758ABEBB562C2153A10D /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		450CA344AE93D07EF83D69AC /* AqualumeHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */; };
-		48ABD765CD343B4C57AE1D7E /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
 		52E6601B423760B4561251E9 /* AqualumeWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		57BDDDE6F2E4797AF9037668 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD00E1D142CF1F9AA872EE6 /* SettingsView.swift */; };
 		598B82941A193B22565A1394 /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
 		5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */; };
-		616651BC39A0AD22AA11E7D8 /* AqualumeHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */; };
 		65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */; };
-		6C2FF66E329D93263910B3BC /* WatchConnectivityHydrationSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */; };
 		6E8A694B73061077530368A9 /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		70E55F3804E1E0D1C24BDCA8 /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
 		7300CCF59AC07B0D4AA11E02 /* RepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 394FD4CB4FA12F2829A30089 /* RepositoryTests.swift */; };
 		75C5D7383380B46771539431 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFE0EC7521E5FE9EE7753D8 /* Foundation.framework */; };
-		75F55950405370A2D3A4AF6D /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
 		7F9B8567DEEA3DAC4E5F2995 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FDE6F72D543EF9817FF1FA80 /* Assets.xcassets */; };
 		85224D66C8700E91FC28FB5B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFE0EC7521E5FE9EE7753D8 /* Foundation.framework */; };
 		8590F7FBEB3C7FB0BA2B0188 /* AppleHealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED151E7CBBF0F6D78DB952C5 /* AppleHealthKitService.swift */; };
 		892D677D3230FC1E439789F9 /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
 		90207E14919CB8BE22DA387A /* HydrationActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */; };
-		903AA3202A6A01E7139E825E /* WatchConnectivityHydrationSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */; };
 		915CE87837D56D4C0EB348A7 /* AqualumeWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D7ED536235B6AD001B5BCD /* AqualumeWidgetBundle.swift */; };
-		91B83D27D5999E994732FCDC /* HydrationServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36EF478036E60AA36AC32AC /* HydrationServices.swift */; };
 		949600CF3E2809454AFF9B68 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFE0EC7521E5FE9EE7753D8 /* Foundation.framework */; };
-		9D410AA9ADD2FEC6C14BAE3B /* WatchHydrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6919DA666C08388368A504A5 /* WatchHydrationView.swift */; };
 		9FD817DDEEAB64F77DEC4A6D /* AqualumeRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E92A3946750C4350B1A4FAC /* AqualumeRootView.swift */; };
 		A8CF94EA4ACB403B09713839 /* HydrationActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */; };
 		ACAF007BB5402B8DF24378D4 /* LocalReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5A76FC5FE0E4056E35D23A /* LocalReminderScheduler.swift */; };
-		B086DDDFB38EDE0153A3E865 /* AqualumeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8185F7E67C1D532944CA1938 /* AqualumeWatchApp.swift */; };
 		B41E9680616652C9ADC0D7BD /* QuickAmountControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE26CC02943B9D88A75E8A7 /* QuickAmountControl.swift */; };
 		B4CAADE784D8DA5CBE817709 /* HydrationLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */; };
-		B6C83B6785FEA6C34DC20E1A /* HydrationGlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7C419291CDDAD5E1056DCB /* HydrationGlassView.swift */; };
-		B8ADCDCB71F3CCF7A53A9F37 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 38693FC3BF8DFDBCB2B8B140 /* Foundation.framework */; };
 		C25DBBD2D217022C188C5425 /* ProgressReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51324BDED92EFEF127A9319 /* ProgressReadout.swift */; };
-		C31C8013870A32470A489F02 /* HydrationCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240E11E030FEF13F220D749B /* HydrationCalculator.swift */; };
 		C73A0C00771504BEAF465EFA /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		DBF9C27302523F4894F585E4 /* HydrationCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240E11E030FEF13F220D749B /* HydrationCalculator.swift */; };
-		DEA44E616EA93585C5EDE3F7 /* HydrationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91E97531DDA56ABDD86419F /* HydrationRepository.swift */; };
 		E04C27F820F2AAEEB81E6C3A /* AqualumeProgressWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB2EF4E01625AFE4850A6A0 /* AqualumeProgressWidget.swift */; };
 		E80F44CCB929250FB5F60A9B /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18AB774149977C3133ED0C91 /* HistoryView.swift */; };
 		EC2186E6404FE397EB18215E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FDE6F72D543EF9817FF1FA80 /* Assets.xcassets */; };
@@ -95,23 +82,16 @@
 		18AB774149977C3133ED0C91 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = Aqualume/Features/History/HistoryView.swift; sourceTree = "<group>"; };
 		240E11E030FEF13F220D749B /* HydrationCalculator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationCalculator.swift; path = Aqualume/Domain/HydrationCalculator.swift; sourceTree = "<group>"; };
 		36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationModels.swift; path = Aqualume/Domain/HydrationModels.swift; sourceTree = "<group>"; };
-		38693FC3BF8DFDBCB2B8B140 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		394FD4CB4FA12F2829A30089 /* RepositoryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RepositoryTests.swift; path = AqualumeTests/RepositoryTests.swift; sourceTree = "<group>"; };
-		3FACA8531E919BC02441054F /* AqualumeWatchApp.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AqualumeWatchApp.entitlements; path = AqualumeWatchApp/AqualumeWatchApp.entitlements; sourceTree = "<group>"; };
 		41D0DC68A4CC3EA2DFFBCD0D /* AqualumeHaptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeHaptics.swift; path = Aqualume/SharedUI/AqualumeHaptics.swift; sourceTree = "<group>"; };
-		41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchConnectivityHydrationSyncService.swift; path = Aqualume/Services/WatchConnectivityHydrationSyncService.swift; sourceTree = "<group>"; };
 		425F93843E06A8B7FA1E2789 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Aqualume/Resources/Info.plist; sourceTree = "<group>"; };
 		4AB2EF4E01625AFE4850A6A0 /* AqualumeProgressWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeProgressWidget.swift; path = AqualumeWidget/AqualumeProgressWidget.swift; sourceTree = "<group>"; };
 		4F632FCBE9F0890E053B4F07 /* ConfettiCelebrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ConfettiCelebrationView.swift; path = Aqualume/Features/Home/ConfettiCelebrationView.swift; sourceTree = "<group>"; };
 		5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationTrendChart.swift; path = Aqualume/Features/History/HydrationTrendChart.swift; sourceTree = "<group>"; };
 		60298CFD3A79C17A92083C9A /* AqualumeWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AqualumeWidget.entitlements; path = AqualumeWidget/AqualumeWidget.entitlements; sourceTree = "<group>"; };
 		62EA8F5F9AEBDE92F2EA251C /* HydrationLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationLogicTests.swift; path = AqualumeTests/HydrationLogicTests.swift; sourceTree = "<group>"; };
-		6919DA666C08388368A504A5 /* WatchHydrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchHydrationView.swift; path = AqualumeWatchApp/WatchHydrationView.swift; sourceTree = "<group>"; };
-		6C926EE9C87207AF815EFD06 /* AqualumeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AqualumeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CEEBE2A19E27E6DF2920CBA /* Aqualume.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = Aqualume.entitlements; path = Aqualume/Aqualume.entitlements; sourceTree = "<group>"; };
 		7B5A76FC5FE0E4056E35D23A /* LocalReminderScheduler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocalReminderScheduler.swift; path = Aqualume/Services/LocalReminderScheduler.swift; sourceTree = "<group>"; };
-		8185F7E67C1D532944CA1938 /* AqualumeWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeWatchApp.swift; path = AqualumeWatchApp/AqualumeWatchApp.swift; sourceTree = "<group>"; };
-		8319A5D5329AC5A63E562F9C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AqualumeWatchApp/Info.plist; sourceTree = "<group>"; };
 		8E92A3946750C4350B1A4FAC /* AqualumeRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AqualumeRootView.swift; path = Aqualume/Features/Home/AqualumeRootView.swift; sourceTree = "<group>"; };
 		9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AqualumeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationLiveActivity.swift; path = AqualumeWidget/HydrationLiveActivity.swift; sourceTree = "<group>"; };
@@ -135,14 +115,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		1700C4F6FF7DBC2796D2B3B5 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B8ADCDCB71F3CCF7A53A9F37 /* Foundation.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6C2407743E67301A57BA7810 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -170,19 +142,10 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1023E8EEC938674BD67795FE /* watchOS */ = {
-			isa = PBXGroup;
-			children = (
-				38693FC3BF8DFDBCB2B8B140 /* Foundation.framework */,
-			);
-			name = watchOS;
-			sourceTree = "<group>";
-		};
 		4D561FD1AC9A8F55C91FBD34 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED6F48E43D857FA699F2673D /* iOS */,
-				1023E8EEC938674BD67795FE /* watchOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -191,7 +154,6 @@
 			isa = PBXGroup;
 			children = (
 				BD1CC1BBCAF5D68FB707708F /* Aqualume.app */,
-				6C926EE9C87207AF815EFD06 /* AqualumeWatchApp.app */,
 				9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */,
 				BB9EE4587CFD9820CFD9C0C1 /* AqualumeTests.xctest */,
 			);
@@ -216,7 +178,6 @@
 				36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */,
 				D91E97531DDA56ABDD86419F /* HydrationRepository.swift */,
 				C36EF478036E60AA36AC32AC /* HydrationServices.swift */,
-				41EF277B3CDD55C4940F932D /* WatchConnectivityHydrationSyncService.swift */,
 				1697CE0244502F0100599A7A /* AqualumeApp.swift */,
 				18AB774149977C3133ED0C91 /* HistoryView.swift */,
 				8E92A3946750C4350B1A4FAC /* AqualumeRootView.swift */,
@@ -229,8 +190,6 @@
 				DD7C419291CDDAD5E1056DCB /* HydrationGlassView.swift */,
 				F51324BDED92EFEF127A9319 /* ProgressReadout.swift */,
 				AEE26CC02943B9D88A75E8A7 /* QuickAmountControl.swift */,
-				8185F7E67C1D532944CA1938 /* AqualumeWatchApp.swift */,
-				6919DA666C08388368A504A5 /* WatchHydrationView.swift */,
 				4AB2EF4E01625AFE4850A6A0 /* AqualumeProgressWidget.swift */,
 				C6D7ED536235B6AD001B5BCD /* AqualumeWidgetBundle.swift */,
 				62EA8F5F9AEBDE92F2EA251C /* HydrationLogicTests.swift */,
@@ -238,8 +197,6 @@
 				FDE6F72D543EF9817FF1FA80 /* Assets.xcassets */,
 				425F93843E06A8B7FA1E2789 /* Info.plist */,
 				6CEEBE2A19E27E6DF2920CBA /* Aqualume.entitlements */,
-				8319A5D5329AC5A63E562F9C /* Info.plist */,
-				3FACA8531E919BC02441054F /* AqualumeWatchApp.entitlements */,
 				AB12D079508BA43E54FBE780 /* Info.plist */,
 				60298CFD3A79C17A92083C9A /* AqualumeWidget.entitlements */,
 				5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */,
@@ -306,23 +263,6 @@
 			productReference = 9840ABE08DA5A5BB78D93341 /* AqualumeWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		D2CF1A35117FF5E3D7D6508C /* AqualumeWatchApp */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C7C6A5A15771502CAEEB3592 /* Build configuration list for PBXNativeTarget "AqualumeWatchApp" */;
-			buildPhases = (
-				C7DF2A11D393AB4148F98598 /* Sources */,
-				1700C4F6FF7DBC2796D2B3B5 /* Frameworks */,
-				338D96E04C169512FBBDE8BA /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = AqualumeWatchApp;
-			productName = AqualumeWatchApp;
-			productReference = 6C926EE9C87207AF815EFD06 /* AqualumeWatchApp.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -344,10 +284,6 @@
 						DevelopmentTeam = 6HCSLSANAX;
 						ProvisioningStyle = Automatic;
 					};
-					D2CF1A35117FF5E3D7D6508C = {
-						DevelopmentTeam = 6HCSLSANAX;
-						ProvisioningStyle = Automatic;
-					};
 				};
 			};
 			buildConfigurationList = 71822CCB56F653752421B02A /* Build configuration list for PBXProject "Aqualume" */;
@@ -364,7 +300,6 @@
 			projectRoot = "";
 			targets = (
 				1B5FEFF2DCEAA8D3A82F70A1 /* Aqualume */,
-				D2CF1A35117FF5E3D7D6508C /* AqualumeWatchApp */,
 				C6D6B4FF5EBAC4ADD486E01C /* AqualumeWidgetExtension */,
 				514D8A21725098CC6B54ECC7 /* AqualumeTests */,
 			);
@@ -373,13 +308,6 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		335690D4E8632999A55BCD11 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		338D96E04C169512FBBDE8BA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -439,7 +367,6 @@
 				C73A0C00771504BEAF465EFA /* HydrationModels.swift in Sources */,
 				2F5F68CE5D012D9F06D322A9 /* HydrationRepository.swift in Sources */,
 				F66D31685A874BE15F8FD8C0 /* HydrationServices.swift in Sources */,
-				6C2FF66E329D93263910B3BC /* WatchConnectivityHydrationSyncService.swift in Sources */,
 				16572663B4E57E3D3C138499 /* AqualumeApp.swift in Sources */,
 				E80F44CCB929250FB5F60A9B /* HistoryView.swift in Sources */,
 				9FD817DDEEAB64F77DEC4A6D /* AqualumeRootView.swift in Sources */,
@@ -455,24 +382,6 @@
 				5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */,
 				90207E14919CB8BE22DA387A /* HydrationActivityAttributes.swift in Sources */,
 				65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		C7DF2A11D393AB4148F98598 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				75F55950405370A2D3A4AF6D /* AmountFormatter.swift in Sources */,
-				C31C8013870A32470A489F02 /* HydrationCalculator.swift in Sources */,
-				40F3758ABEBB562C2153A10D /* HydrationModels.swift in Sources */,
-				DEA44E616EA93585C5EDE3F7 /* HydrationRepository.swift in Sources */,
-				91B83D27D5999E994732FCDC /* HydrationServices.swift in Sources */,
-				903AA3202A6A01E7139E825E /* WatchConnectivityHydrationSyncService.swift in Sources */,
-				B086DDDFB38EDE0153A3E865 /* AqualumeWatchApp.swift in Sources */,
-				9D410AA9ADD2FEC6C14BAE3B /* WatchHydrationView.swift in Sources */,
-				48ABD765CD343B4C57AE1D7E /* HydrationAppState.swift in Sources */,
-				B6C83B6785FEA6C34DC20E1A /* HydrationGlassView.swift in Sources */,
-				616651BC39A0AD22AA11E7D8 /* AqualumeHaptics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -576,33 +485,6 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
-		};
-		6BAEF0BA66673EB11FB69B12 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = AqualumeWatchApp/AqualumeWatchApp.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6HCSLSANAX;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = AqualumeWatchApp/Info.plist;
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lsqlite3",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.gigaxel.aqualume.watchapp;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 9.4;
-			};
-			name = Release;
 		};
 		7C7C2FFE54BF16AD0541633B /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -802,32 +684,6 @@
 			};
 			name = Release;
 		};
-		DC5CFC868A3CB221B5BE026C /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = AqualumeWatchApp/AqualumeWatchApp.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6HCSLSANAX;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = AqualumeWatchApp/Info.plist;
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lsqlite3",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.gigaxel.aqualume.watchapp;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 9.4;
-			};
-			name = Debug;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -854,15 +710,6 @@
 			buildConfigurations = (
 				2EE53AEE124DC7C32C741D9C /* Release */,
 				92EF28369B3CDBD72408DC12 /* Debug */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		C7C6A5A15771502CAEEB3592 /* Build configuration list for PBXNativeTarget "AqualumeWatchApp" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6BAEF0BA66673EB11FB69B12 /* Release */,
-				DC5CFC868A3CB221B5BE026C /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

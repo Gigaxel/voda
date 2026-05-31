@@ -10,4 +10,6 @@ fi
 echo "Project: ${project}"
 xcodebuild -list -project Aqualume.xcodeproj
 echo
-xcrun simctl list devices available | sed -n '1,80p'
+if ! xcrun simctl list devices available | sed -n '1,80p'; then
+  echo "Simulator device listing unavailable."
+fi

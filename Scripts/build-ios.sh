@@ -9,4 +9,12 @@ fi
 cmd=(xcodebuild -project Aqualume.xcodeproj -scheme Aqualume -destination "${destination}" build)
 printf '%q ' "${cmd[@]}"
 echo
-"${cmd[@]}"
+if "${cmd[@]}"; then
+  exit 0
+fi
+
+echo "Simulator scheme build failed; retrying installable iOS device build without code signing."
+fallback=(xcodebuild -project Aqualume.xcodeproj -target Aqualume build CODE_SIGNING_ALLOWED=NO)
+printf '%q ' "${fallback[@]}"
+echo
+"${fallback[@]}"

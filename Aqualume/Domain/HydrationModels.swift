@@ -23,7 +23,6 @@ public enum HydrationProfileGender: String, Codable, CaseIterable, Equatable, Se
 
 public enum HydrationLogSource: String, Codable, CaseIterable, Equatable, Sendable {
     case iPhone
-    case watch
     case widget
     case appIntent
 }

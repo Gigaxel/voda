@@ -318,7 +318,6 @@ Generate only if implementation needs them:
 - Separate dark-mode glass layer.
 - App Store feature graphic.
 - Onboarding illustration.
-- Watch complication background.
 
 ## Integration Checklist
 

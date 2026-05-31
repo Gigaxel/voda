@@ -47,8 +47,7 @@ end
 shared_paths = Dir[
   "Aqualume/Domain/**/*.swift",
   "Aqualume/Persistence/**/*.swift",
-  "Aqualume/Services/HydrationServices.swift",
-  "Aqualume/Services/WatchConnectivityHydrationSyncService.swift"
+  "Aqualume/Services/HydrationServices.swift"
 ].sort
 
 ios_paths = Dir[
@@ -64,18 +63,15 @@ ios_paths = Dir[
 live_activity_shared_paths = ["Aqualume/LiveActivity/HydrationActivityAttributes.swift"]
 live_activity_app_paths = ["Aqualume/LiveActivity/LiveActivityController.swift"]
 
-watch_paths = Dir["AqualumeWatchApp/**/*.swift"].sort
 widget_paths = Dir["AqualumeWidget/**/*.swift"].sort
 test_paths = Dir["AqualumeTests/**/*.swift"].sort
 resource_paths = [
   "Aqualume/Resources/Assets.xcassets"
 ]
 
-all_paths = (shared_paths + ios_paths + live_activity_shared_paths + live_activity_app_paths + watch_paths + widget_paths + test_paths + resource_paths + [
+all_paths = (shared_paths + ios_paths + live_activity_shared_paths + live_activity_app_paths + widget_paths + test_paths + resource_paths + [
   "Aqualume/Resources/Info.plist",
   "Aqualume/Aqualume.entitlements",
-  "AqualumeWatchApp/Info.plist",
-  "AqualumeWatchApp/AqualumeWatchApp.entitlements",
   "AqualumeWidget/Info.plist",
   "AqualumeWidget/AqualumeWidget.entitlements"
 ]).uniq
@@ -97,22 +93,6 @@ end
 add_sources(ios_target, (shared_paths + ios_paths + live_activity_shared_paths + live_activity_app_paths).map { |p| refs_by_path[p] })
 add_resources(ios_target, resource_paths.map { |p| refs_by_path[p] })
 
-watch_target = project.new_target(:application, "AqualumeWatchApp", :watchos, "9.4")
-configure_common(watch_target)
-watch_target.build_configurations.each do |config|
-  config.build_settings.delete("ASSETCATALOG_COMPILER_APPICON_NAME")
-  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "com.gigaxel.aqualume.watchapp"
-  config.build_settings["INFOPLIST_FILE"] = "AqualumeWatchApp/Info.plist"
-  config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "AqualumeWatchApp/AqualumeWatchApp.entitlements"
-  config.build_settings["SUPPORTED_PLATFORMS"] = "watchos watchsimulator"
-  config.build_settings["WATCHOS_DEPLOYMENT_TARGET"] = "9.4"
-end
-add_sources(watch_target, (shared_paths + watch_paths + [
-  "Aqualume/Features/Home/HydrationAppState.swift",
-  "Aqualume/SharedUI/HydrationGlassView.swift",
-  "Aqualume/SharedUI/AqualumeHaptics.swift"
-]).map { |p| refs_by_path[p] })
-
 widget_target = project.new_target(:app_extension, "AqualumeWidgetExtension", :ios, "17.0")
 configure_common(widget_target)
 widget_target.build_configurations.each do |config|
@@ -124,8 +104,7 @@ widget_target.build_configurations.each do |config|
   config.build_settings["APPLICATION_EXTENSION_API_ONLY"] = "YES"
   config.build_settings["SKIP_INSTALL"] = "YES"
 end
-widget_shared_paths = shared_paths - ["Aqualume/Services/WatchConnectivityHydrationSyncService.swift"]
-add_sources(widget_target, (widget_shared_paths + live_activity_shared_paths + widget_paths).map { |p| refs_by_path[p] })
+add_sources(widget_target, (shared_paths + live_activity_shared_paths + widget_paths).map { |p| refs_by_path[p] })
 add_resources(widget_target, resource_paths.map { |p| refs_by_path[p] })
 
 ios_target.add_dependency(widget_target)
