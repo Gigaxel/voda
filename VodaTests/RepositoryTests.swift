@@ -45,6 +45,22 @@ final class RepositoryTests: XCTestCase {
         XCTAssertEqual(logs.count, 1)
     }
 
+    func testSQLiteRepositoryUpdatesExistingLog() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let repository = SQLiteHydrationRepository(directory: directory)
+        var log = HydrationLog(amountML: 250, loggedAt: Date(timeIntervalSince1970: 1_000_000), source: .iPhone)
+        try await repository.appendLog(log)
+
+        log.amountML = 600
+        log.loggedAt = Date(timeIntervalSince1970: 1_000_600)
+        log.healthKitSampleIdentifier = "sample"
+        try await repository.updateLog(log)
+
+        let logs = try await repository.loadLogs()
+        XCTAssertEqual(logs, [log])
+    }
+
     func testSQLiteRepositoryPersistsAcrossInstances() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

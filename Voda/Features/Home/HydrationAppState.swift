@@ -216,6 +216,71 @@ public final class HydrationAppState: ObservableObject {
         }
     }
 
+    public func logs(on day: Date) async throws -> [HydrationLog] {
+        try await hydrationRepository.loadLogs(on: day, calendar: calculator.calendar)
+    }
+
+    /// Adds a log at an arbitrary past time, e.g. when correcting an earlier day from History.
+    public func addLog(amountML: Int, loggedAt: Date) async throws {
+        refreshForCurrentDate()
+        let hadReachedGoal = hasReachedGoal
+        var log = HydrationLog(
+            amountML: HydrationValidation.validatedDefaultAmount(amountML),
+            loggedAt: min(loggedAt, now()),
+            source: .iPhone
+        )
+        if calculator.isSameDay(log.loggedAt, now()) {
+            try await saveCurrentGoalSnapshotIfNeeded()
+        }
+        try await hydrationRepository.appendLog(log)
+        if settings.healthKitEnabled {
+            do {
+                log.healthKitSampleIdentifier = try await healthKit.writeWater(amountML: log.amountML, date: log.loggedAt)
+                try await hydrationRepository.updateLog(log)
+            } catch {
+                statusMessage = "Saved locally. Health write unavailable."
+            }
+        }
+        await sync.sendLog(log)
+        await refreshAfterLogsChanged(hadReachedGoal: hadReachedGoal)
+    }
+
+    /// Changes the amount and time of an existing log, keeping it on the same day.
+    public func updateLog(_ log: HydrationLog, amountML: Int, loggedAt: Date) async throws {
+        refreshForCurrentDate()
+        guard !pendingOptimisticLogIDs.contains(log.id) else { return }
+        let hadReachedGoal = hasReachedGoal
+        var updated = log
+        updated.amountML = HydrationValidation.validatedDefaultAmount(amountML)
+        updated.loggedAt = calculator.isSameDay(loggedAt, log.loggedAt) ? min(loggedAt, now()) : log.loggedAt
+        guard updated != log else { return }
+
+        try await hydrationRepository.updateLog(updated)
+        if let identifier = log.healthKitSampleIdentifier {
+            try? await healthKit.deleteWaterSample(identifier: identifier)
+            updated.healthKitSampleIdentifier = nil
+            if settings.healthKitEnabled {
+                updated.healthKitSampleIdentifier = try? await healthKit.writeWater(
+                    amountML: updated.amountML,
+                    date: updated.loggedAt
+                )
+            }
+            try? await hydrationRepository.updateLog(updated)
+        }
+        await refreshAfterLogsChanged(hadReachedGoal: hadReachedGoal)
+    }
+
+    public func deleteLog(_ log: HydrationLog) async throws {
+        refreshForCurrentDate()
+        guard !pendingOptimisticLogIDs.contains(log.id) else { return }
+        let hadReachedGoal = hasReachedGoal
+        try await hydrationRepository.removeLog(id: log.id)
+        if let identifier = log.healthKitSampleIdentifier {
+            try? await healthKit.deleteWaterSample(identifier: identifier)
+        }
+        await refreshAfterLogsChanged(hadReachedGoal: hadReachedGoal)
+    }
+
     public func updateSettings(_ update: (inout UserHydrationSettings) -> Void) async {
         refreshForCurrentDate()
         var next = settings
@@ -351,6 +416,25 @@ public final class HydrationAppState: ObservableObject {
                 && calculator.isSameDay(log.loggedAt, now())
         }
         todayLogs = (loadedTodayLogs + pendingLogs).sorted { $0.loggedAt < $1.loggedAt }
+    }
+
+    private func refreshAfterLogsChanged(hadReachedGoal: Bool) async {
+        do {
+            let loadedTodayLogs = try await hydrationRepository.loadLogs(on: now(), calendar: calculator.calendar)
+            mergeTodayLogsWithPending(loadedTodayLogs)
+        } catch {
+            statusMessage = "Unable to load hydration data."
+        }
+        if !hadReachedGoal && hasReachedGoal {
+            await notifyStreakGoalReachedIfNeeded()
+        }
+        if hadReachedGoal != hasReachedGoal {
+            await refreshHydrationReminders()
+        }
+        await refreshStreakReminder()
+        await refreshLoadedHistoryIfNeeded()
+        reloadWidgets()
+        await refreshLiveActivity()
     }
 
     private func refreshLoadedHistoryIfNeeded() async {

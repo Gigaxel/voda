@@ -7,6 +7,7 @@ public protocol HydrationRepository: Sendable {
     func total(on day: Date, calendar: Calendar) async throws -> Int
     func loadDailyTotals(from startDay: Date?, through endDay: Date, calendar: Calendar) async throws -> [String: Int]
     func appendLog(_ log: HydrationLog) async throws
+    func updateLog(_ log: HydrationLog) async throws
     func removeLog(id: UUID) async throws
 }
 
@@ -86,6 +87,11 @@ public actor SQLiteHydrationRepository: HydrationRepository, SettingsRepository,
     public func appendLog(_ log: HydrationLog) async throws {
         let database = try SQLiteDatabase(fileURL: fileURL)
         try SQLiteHydrationStore.insertLog(log, into: database)
+    }
+
+    public func updateLog(_ log: HydrationLog) async throws {
+        let database = try SQLiteDatabase(fileURL: fileURL)
+        try SQLiteHydrationStore.updateLog(log, in: database)
     }
 
     public func removeLog(id: UUID) async throws {
@@ -226,6 +232,11 @@ public actor InMemoryHydrationRepository: HydrationRepository, SettingsRepositor
     public func appendLog(_ log: HydrationLog) async throws {
         guard !logs.contains(where: { $0.id == log.id }) else { return }
         logs.append(log)
+    }
+
+    public func updateLog(_ log: HydrationLog) async throws {
+        guard let index = logs.firstIndex(where: { $0.id == log.id }) else { return }
+        logs[index] = log
     }
 
     public func removeLog(id: UUID) async throws {
@@ -617,6 +628,26 @@ private enum SQLiteHydrationStore {
         try database.bind(log.loggedAt, at: 3, in: statement)
         try database.bind(log.source.rawValue, at: 4, in: statement)
         try database.bind(log.healthKitSampleIdentifier, at: 5, in: statement)
+        try database.stepDone(statement, sql: sql)
+    }
+
+    static func updateLog(_ log: HydrationLog, in database: SQLiteDatabase) throws {
+        let sql = """
+        UPDATE hydration_logs
+        SET amount_ml = ?,
+            logged_at = ?,
+            source = ?,
+            healthkit_sample_identifier = ?
+        WHERE id = ?;
+        """
+        let statement = try database.prepare(sql)
+        defer { sqlite3_finalize(statement) }
+
+        try database.bind(log.amountML, at: 1, in: statement)
+        try database.bind(log.loggedAt, at: 2, in: statement)
+        try database.bind(log.source.rawValue, at: 3, in: statement)
+        try database.bind(log.healthKitSampleIdentifier, at: 4, in: statement)
+        try database.bind(log.id.uuidString, at: 5, in: statement)
         try database.stepDone(statement, sql: sql)
     }
 

@@ -3,6 +3,7 @@ import SwiftUI
 struct HistoryView: View {
     @EnvironmentObject private var state: HydrationAppState
     @State private var selectedRange: HistoryRange = .ninetyDays
+    @State private var editingSummary: DailyHydrationSummary?
 
     private var summaries: [DailyHydrationSummary] {
         state.summaries(days: selectedRange.days)
@@ -46,7 +47,8 @@ struct HistoryView: View {
                         ScrollView(.horizontal) {
                             HistoryCalendarHeatmap(
                                 summaries: summaries,
-                                unitSystem: state.settings.unitSystem
+                                unitSystem: state.settings.unitSystem,
+                                onSelect: { editingSummary = $0 }
                             )
                             .frame(maxWidth: .infinity)
                         }
@@ -61,16 +63,28 @@ struct HistoryView: View {
                     .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
                 }
 
-                Section("Daily Totals") {
+                Section {
                     ForEach(summaries.reversed()) { summary in
-                        HistorySummaryRow(summary: summary, unitSystem: state.settings.unitSystem)
+                        Button {
+                            editingSummary = summary
+                        } label: {
+                            HistorySummaryRow(summary: summary, unitSystem: state.settings.unitSystem)
+                        }
+                        .accessibilityHint("Edit entries for this day")
                     }
+                } header: {
+                    Text("Daily Totals")
+                } footer: {
+                    Text("Tap a day to add, change, or remove entries.")
                 }
             }
         }
         .navigationTitle("History")
         .task(id: state.currentDateKey) {
             await state.loadHistory(days: HistoryRange.oneYear.days)
+        }
+        .sheet(item: $editingSummary) { summary in
+            DayLogEditorView(summary: summary)
         }
     }
 
@@ -168,6 +182,7 @@ private struct HistoryCalendarHeatmap: View {
 
     let summaries: [DailyHydrationSummary]
     let unitSystem: HydrationUnitSystem
+    let onSelect: (DailyHydrationSummary) -> Void
 
     private let calendar = Calendar.current
 
@@ -250,9 +265,13 @@ private struct HistoryCalendarHeatmap: View {
                     }
                 }
                 .id(day.isToday ? Self.todayID : day.id)
+                .contentShape(.rect)
+                .onTapGesture { onSelect(summary) }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(summary.date, format: .dateTime.weekday().month().day().year()))
                 .accessibilityValue(accessibilityValue(for: summary))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { onSelect(summary) }
         } else {
             Color.clear
                 .frame(width: cellSize, height: cellSize)
@@ -387,15 +406,21 @@ private struct HistorySummaryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(summary.date, format: .dateTime.weekday(.wide).month().day())
                     .font(.headline)
+                    .foregroundStyle(Color.primary)
                 Text("\(Int(summary.progress * 100))% of \(goalText) goal")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
             Spacer()
             Text(HydrationAmountFormatter.amount(summary.totalML, unitSystem: unitSystem))
                 .font(.system(.title3, design: .rounded, weight: .semibold))
+                .foregroundStyle(Color.primary)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.secondary.opacity(0.6))
         }
         .padding(.vertical, 6)
+        .contentShape(.rect)
     }
 
     private var goalText: String {

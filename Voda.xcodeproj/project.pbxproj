@@ -20,6 +20,7 @@
 		598B82941A193B22565A1394 /* HydrationAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A92B16771E2E9ED31DA7F9 /* HydrationAppState.swift */; };
 		5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FBAD7172AD73CD53D98548C /* HydrationTrendChart.swift */; };
 		65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */; };
+		68C2A3B43A8BB756F76EAECA /* DayLogEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C79A0100C3A53D79E30A16F /* DayLogEditorView.swift */; };
 		6E8A694B73061077530368A9 /* HydrationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36517AFDEF1FB55663CCF6EA /* HydrationModels.swift */; };
 		70E55F3804E1E0D1C24BDCA8 /* AmountFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DF0C93A6F3606E0CD2BBD1 /* AmountFormatter.swift */; };
 		7300CCF59AC07B0D4AA11E02 /* RepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 394FD4CB4FA12F2829A30089 /* RepositoryTests.swift */; };
@@ -78,6 +79,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0C79A0100C3A53D79E30A16F /* DayLogEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DayLogEditorView.swift; path = Voda/Features/History/DayLogEditorView.swift; sourceTree = "<group>"; };
 		1697CE0244502F0100599A7A /* VodaApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VodaApp.swift; path = Voda/App/VodaApp.swift; sourceTree = "<group>"; };
 		18AB774149977C3133ED0C91 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = Voda/Features/History/HistoryView.swift; sourceTree = "<group>"; };
 		240E11E030FEF13F220D749B /* HydrationCalculator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HydrationCalculator.swift; path = Voda/Domain/HydrationCalculator.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				AAA69027B12DBEB8091A62A8 /* HydrationActivityAttributes.swift */,
 				EA736D93EBA0A0A94F2EC3B9 /* LiveActivityController.swift */,
 				9D9063E2AD4EB879E852BB48 /* HydrationLiveActivity.swift */,
+				0C79A0100C3A53D79E30A16F /* DayLogEditorView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -382,6 +385,7 @@
 				5CF7F123C1F2842BB8F1A1EF /* HydrationTrendChart.swift in Sources */,
 				90207E14919CB8BE22DA387A /* HydrationActivityAttributes.swift in Sources */,
 				65E8B8F10CCADEB095EAEB27 /* LiveActivityController.swift in Sources */,
+				68C2A3B43A8BB756F76EAECA /* DayLogEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

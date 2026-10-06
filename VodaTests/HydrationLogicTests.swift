@@ -414,6 +414,108 @@ final class HydrationLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testAddingLogToPastDayUpdatesHistoryAndStreakWithoutTouchingToday() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let settings = UserHydrationSettings(dailyGoalML: 500)
+        let repository = InMemoryHydrationRepository(
+            logs: [HydrationLog(amountML: 500, loggedAt: today, source: .iPhone)],
+            settings: settings
+        )
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        await state.loadHistory(days: 2)
+        XCTAssertEqual(state.streakStatus.currentDays, 1)
+
+        try await state.addLog(amountML: 500, loggedAt: yesterday)
+
+        XCTAssertEqual(state.todayTotalML, 500)
+        XCTAssertEqual(state.summaries(days: 2).map(\.totalML), [500, 500])
+        XCTAssertEqual(state.streakStatus.currentDays, 2)
+        let yesterdayLogs = try await state.logs(on: yesterday)
+        XCTAssertEqual(yesterdayLogs.map(\.amountML), [500])
+    }
+
+    @MainActor
+    func testAddingLogNeverPlacesItInTheFuture() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let repository = InMemoryHydrationRepository()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        try await state.addLog(amountML: 250, loggedAt: today.addingTimeInterval(3_600))
+
+        XCTAssertEqual(state.todayLogs.map(\.loggedAt), [today])
+    }
+
+    @MainActor
+    func testEditingPastLogChangesAmountAndKeepsItOnTheSameDay() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let yesterday = date(year: 2026, month: 5, day: 10, calendar: calendar)
+        let log = HydrationLog(amountML: 250, loggedAt: yesterday, source: .iPhone)
+        let repository = InMemoryHydrationRepository(logs: [log])
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        await state.loadHistory(days: 2)
+        try await state.updateLog(log, amountML: 750, loggedAt: yesterday.addingTimeInterval(-3_600))
+
+        let earlierTime = try await state.logs(on: yesterday)
+        XCTAssertEqual(earlierTime.map(\.amountML), [750])
+        XCTAssertEqual(earlierTime.map(\.loggedAt), [yesterday.addingTimeInterval(-3_600)])
+        XCTAssertEqual(state.summaries(days: 2).map(\.totalML), [750, 0])
+
+        try await state.updateLog(earlierTime[0], amountML: 750, loggedAt: today)
+
+        let afterCrossDayEdit = try await state.logs(on: yesterday)
+        XCTAssertEqual(afterCrossDayEdit.map(\.loggedAt), [yesterday.addingTimeInterval(-3_600)])
+        XCTAssertTrue(state.todayLogs.isEmpty)
+    }
+
+    @MainActor
+    func testDeletingTodayLogFromHistoryResumesReminders() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = date(year: 2026, month: 5, day: 11, calendar: calendar)
+        let settings = UserHydrationSettings(dailyGoalML: 500, remindersEnabled: true)
+        let repository = InMemoryHydrationRepository(settings: settings)
+        let reminders = RecordingReminderScheduler()
+        let state = HydrationAppState(
+            hydrationRepository: repository,
+            settingsRepository: repository,
+            reminders: reminders,
+            calculator: HydrationCalculator(calendar: calendar),
+            now: { today }
+        )
+
+        await state.load()
+        await state.log(amountML: 500)
+        let log = try XCTUnwrap(state.todayLogs.first)
+        try await state.deleteLog(log)
+
+        XCTAssertEqual(state.todayTotalML, 0)
+        XCTAssertEqual(reminders.scheduledReminderIncludesToday, [true, false, true])
+    }
+
+    @MainActor
     func testDevelopmentOnboardingReplayOnlyClearsCompletionFlag() async {
         let settings = UserHydrationSettings(
             dailyGoalML: 2_850,
